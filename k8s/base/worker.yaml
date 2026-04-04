@@ -65,6 +65,9 @@ spec:
       labels:
         app: laravel-worker
     spec:
+      # 必須大於 queue:work --timeout=90，讓當前 job 有足夠時間跑完再結束
+      # 公式：terminationGracePeriodSeconds > --timeout + 少量緩衝
+      terminationGracePeriodSeconds: 120
       containers:
       - name: worker
         image: manualsmash/senile-app:placeholder

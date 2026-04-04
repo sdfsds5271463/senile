@@ -65,6 +65,15 @@ jobs:
           docker build -t ${{ steps.vars.outputs.image }} .
           docker push ${{ steps.vars.outputs.image }}
 
+      # ── 掃描 image（僅 production，有 CRITICAL 漏洞則中止部署）───────────────
+      - name: Scan image with Trivy
+        if: steps.vars.outputs.branch == 'main'
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: ${{ steps.vars.outputs.image }}
+          exit-code: '1'
+          severity: 'CRITICAL'
+
       # ── 更新對應 overlay 的 kustomization.yaml image tag ────────────────────
       - name: Update Kustomize Image Tag
         run: |
