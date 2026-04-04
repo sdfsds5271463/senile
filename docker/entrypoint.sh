@@ -14,11 +14,7 @@ if [ "$1" = "php-fpm" ]; then
     done
     echo "Database is up! Initializing..."
 
-    echo "Running migrations..."
-    php artisan migrate --force
-
-    echo "Running AllenUserSeeder..."
-    php artisan db:seed --class=AllenUserSeeder --force
+    php /var/www/docker/migrate-with-lock.php
 fi
 
 # 2. 執行原本要跑的指令 (可能是 php-fpm, 也可能是 artisan queue:work 等)

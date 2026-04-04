@@ -1,3 +1,25 @@
+# MySQL 初始化腳本：首次建立 DB 時建立 migration_dbuser 與 senile_dbusr
+# 只在 PVC 全新時執行（MySQL initdb 機制）
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-initdb
+data:
+  01-create-users.sh: |
+    #!/bin/sh
+    set -e
+    mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" <<-EOSQL
+      CREATE USER IF NOT EXISTS 'migration_dbuser'@'%' IDENTIFIED BY '${MYSQL_MIGRATION_PASSWORD}';
+      GRANT CREATE, ALTER, DROP, INDEX, INSERT, UPDATE, DELETE, SELECT
+        ON \`${MYSQL_DATABASE}\`.* TO 'migration_dbuser'@'%';
+
+      CREATE USER IF NOT EXISTS 'senile_dbusr'@'%' IDENTIFIED BY '${MYSQL_APP_PASSWORD}';
+      GRANT INSERT, UPDATE, DELETE, SELECT
+        ON \`${MYSQL_DATABASE}\`.* TO 'senile_dbusr'@'%';
+
+      FLUSH PRIVILEGES;
+    EOSQL
+---
 # Production MySQL（StatefulSet，保證 PVC 與 Pod 永久綁定，避免 ibdata1 髒寫）
 apiVersion: apps/v1
 kind: StatefulSet
@@ -25,7 +47,7 @@ spec:
           valueFrom:
             secretKeyRef:
               name: laravel-secret
-              key: DB_PASSWORD
+              key: DB_ROOT_PASSWORD
         - name: MYSQL_DATABASE
           valueFrom:
             configMapKeyRef:
@@ -33,6 +55,16 @@ spec:
               key: DB_DATABASE
         - name: MYSQL_ROOT_HOST
           value: "%"
+        - name: MYSQL_MIGRATION_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: laravel-secret
+              key: MIGRATION_DB_PASSWORD
+        - name: MYSQL_APP_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: laravel-secret
+              key: DB_PASSWORD
         resources:
           requests:
             memory: "512Mi"
@@ -43,6 +75,8 @@ spec:
         volumeMounts:
           - name: mysql-data
             mountPath: /var/lib/mysql
+          - name: mysql-initdb
+            mountPath: /docker-entrypoint-initdb.d
         readinessProbe:
           exec:
             command: ["sh", "-c", "mysqladmin ping -h 127.0.0.1 -p$MYSQL_ROOT_PASSWORD"]
@@ -82,6 +116,11 @@ spec:
             port: 9104
           failureThreshold: 30    # 最多等 30 * 5s = 150 秒
           periodSeconds: 5
+      volumes:
+        - name: mysql-initdb
+          configMap:
+            name: mysql-initdb
+            defaultMode: 0755
   # StatefulSet 的 PVC 模板：每個 Pod 自動建立並永久綁定自己的 PVC
   volumeClaimTemplates:
     - metadata:
