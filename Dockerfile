@@ -1,7 +1,7 @@
 # ── Stage 1: JS/CSS 編譯 ────────────────────────────────────────────────────
 # 只做 npm install + npm run build，產出 public/build
 # 此 stage 的 node_modules（含 esbuild）不會進入最終 image
-FROM node:20-alpine AS node-builder
+FROM node:20-slim AS node-builder
 
 WORKDIR /app
 COPY package*.json ./
@@ -36,7 +36,7 @@ RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip \
     && docker-php-ext-enable redis
 
 # 3. 安裝 Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2.9.5 /usr/bin/composer /usr/bin/composer
 
 # 3.5. PHP OPcache 設定 (正式環境版本)
 COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini

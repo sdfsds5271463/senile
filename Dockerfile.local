@@ -23,7 +23,7 @@ RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip \
     && docker-php-ext-enable redis
 
 # 3. 安裝 Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2.9.5 /usr/bin/composer /usr/bin/composer
 
 # 3.5. docker 使用 php 快取 (正式環境與測試環境不同)
 COPY docker/php/opcache.dev.ini /usr/local/etc/php/conf.d/opcache.ini
