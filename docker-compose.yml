@@ -16,8 +16,14 @@ services:
     restart: always
 
   # --- Laravel 主程式 (FPM) ---
+  # dockerfile 說明:
+  #    Dockerfile        線上Build用    兩階段Build，只把編譯好的檔案拷貝，因此沒有 Node.js、node_modules，體積小、攻擊面少。
+  #    Dockerfile.dev    本地up開發用   單階段Build，會把 Node.js、node_modules 包進 images，所以檔案大，但是 SSR 可以直接執行。
+  #       由於複雜掛載原因，docker-compose up 使用 Dockerfile 會慢很多，因此下面用 Dockerfile.dev 做開發即可
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     volumes:
       #- .:/var/www  #掛載全部較慢，掛載下面僅需要的
       - ./app:/var/www/app
@@ -42,7 +48,9 @@ services:
 
   # --- Inertia SSR Server ---
   ssr:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     volumes:
       #- .:/var/www  #掛載全部較慢，掛載下面僅需要的
       - ./config:/var/www/config
@@ -59,7 +67,9 @@ services:
 
   # --- Queue Worker ---
   worker:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     command: php artisan queue:work
     depends_on:
       - app
@@ -70,7 +80,9 @@ services:
 
   # --- Scheduler ---
   scheduler:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     command: sh -c "while [ true ]; do php artisan schedule:run --no-interaction & sleep 60; done"
     depends_on:
       - app
