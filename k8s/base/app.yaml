@@ -116,9 +116,6 @@ spec:
           limits:
             memory: "64Mi"
             cpu: "100m"
-        securityContext:
-          runAsNonRoot: true
-          runAsUser: 101   # nginx（nginx:alpine 預設）
         livenessProbe:
           httpGet:
             path: /
