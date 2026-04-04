@@ -46,8 +46,10 @@ WORKDIR /var/www
 # 4. 複製 PHP 程式碼（排除 node_modules、前端原始碼）
 COPY . .
 
-# 5. 從 node-builder stage 複製編譯好的靜態資產（覆蓋 public/build）
+# 5. 從 node-builder stage 複製編譯好的靜態資產
 COPY --from=node-builder /app/public/build ./public/build
+# SSR bundle（vite build --ssr 的輸出），inertia:start-ssr 需要
+COPY --from=node-builder /app/bootstrap/ssr ./bootstrap/ssr
 
 # 5.1 從 node-builder 複製 Node.js runtime（SSR 需要執行 node bootstrap/ssr/ssr.js）
 # 只複製 binary，不複製 npm/node_modules，攻擊面最小
