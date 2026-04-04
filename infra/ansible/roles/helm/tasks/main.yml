@@ -1,0 +1,25 @@
+---
+# Role: helm
+# 安裝 Helm 3（使用官方安裝腳本）
+# 冪等：先檢查 helm 是否已存在
+
+- name: 檢查 Helm 是否已安裝
+  ansible.builtin.command: helm version --short
+  register: helm_check
+  ignore_errors: true
+  changed_when: false
+
+- name: 下載並執行 Helm 安裝腳本
+  become: true
+  ansible.builtin.shell:
+    cmd: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  when: helm_check.rc != 0
+
+- name: 確認 Helm 版本
+  ansible.builtin.command: helm version --short
+  register: helm_version
+  changed_when: false
+
+- name: 顯示 Helm 版本
+  ansible.builtin.debug:
+    msg: "Helm 安裝完成：{{ helm_version.stdout }}"

@@ -1,0 +1,18 @@
+# ── 使用者設定 ──────────────────────────────────────────────
+vm_user: allen
+vm_home: "/home/allen"
+
+# ── Docker Hub ───────────────────────────────────────────────
+dockerhub_username: manualsmash
+# dockerhub_token → 執行時由 vars_prompt 輸入，不存這裡
+
+# ── GitHub Actions Runner ────────────────────────────────────
+github_repo: "sdfsds5271463/senile"
+runner_version: "2.322.0"
+runner_dir: "actions-runner"
+# gh_runner_token → 執行時由 vars_prompt 輸入，不存這裡
+
+# ── /etc/hosts ───────────────────────────────────────────────
+hosts_entries:
+  - ip: "127.0.0.1"
+    names: "laravel.local dev.laravel.local"

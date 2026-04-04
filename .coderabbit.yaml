@@ -1,0 +1,30 @@
+language: "zh-CN"  # zh-TW 不支援，支援 zh 或 zh-CN
+
+reviews:
+  profile: "chill"                  # 審查風格：chill（友善建議）/ assertive（嚴格要求修改）
+  request_changes_workflow: false   # false = 只留評論；true = 會正式要求修改才能 Merge
+  high_level_summary: true          # 在 PR 頂部顯示整體摘要說明
+  poem: false                       # 關閉 review 結尾的小詩彩蛋
+  review_status: true               # 顯示目前 review 進行狀態
+  auto_review:
+    enabled: true                   # 開啟自動 review（有新 PR 或 push 時自動觸發）
+    ignore_title_keywords: []       # 不跳過任何標題關鍵字
+    drafts: false                   # Draft PR 不觸發，避免草稿階段浪費額度
+    base_branches:
+      - "main"
+  path_instructions:
+    - path: "app/**/*.php"
+      instructions: "這是 Laravel 後端程式碼，請重點檢查：1) Eloquent ORM 是否有 N+1 查詢問題 2) 是否有適當的驗證（FormRequest）3) SQL Injection 與權限控管（Policy/Gate）4) 是否遵循 Laravel 命名慣例"
+    - path: "resources/js/**/*.vue"
+      instructions: "這是 Vue.js 前端程式碼，請重點檢查：1) Vue 3 Composition API 的正確使用 2) XSS 風險（v-html 的使用）3) Props 定義是否完整（TypeScript interface）4) 元件命名是否符合 PascalCase 慣例"
+    - path: "resources/js/**/*.ts"
+      instructions: "TypeScript 程式碼，請檢查型別定義是否完整，避免過度使用 any。"
+    - path: "database/migrations/**"
+      instructions: "資料庫 Migration，請確認：索引是否適當、欄位型別是否正確、是否有 down() 方法。"
+    - path: "tests/**"
+      instructions: "測試程式碼，請確認測試案例是否完整涵蓋邊界條件。"
+    - path: "k8s/**"
+      instructions: "此目錄的 yaml 檔案為 CI/CD 自動產生（僅更新 image tag），不需進行程式碼審查，請略過。"
+
+chat:
+  auto_reply: true

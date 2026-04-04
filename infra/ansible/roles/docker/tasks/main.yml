@@ -1,0 +1,36 @@
+---
+# Role: docker
+# 安裝 Docker Engine 並將 vm_user 加入 docker group
+# 冪等：先檢查 docker 是否已存在，存在則跳過安裝
+
+- name: 檢查 Docker 是否已安裝
+  ansible.builtin.command: docker --version
+  register: docker_check
+  ignore_errors: true
+  changed_when: false   # 純查詢，不算 changed
+
+- name: 下載並執行 Docker 安裝腳本
+  become: true
+  ansible.builtin.shell:
+    cmd: curl -fsSL https://get.docker.com | sh
+  when: docker_check.rc != 0   # 只在未安裝時執行
+
+- name: 確保 docker group 存在
+  become: true
+  ansible.builtin.group:
+    name: docker
+    state: present
+
+- name: 將 {{ vm_user }} 加入 docker group
+  become: true
+  ansible.builtin.user:
+    name: "{{ vm_user }}"
+    groups: docker
+    append: true   # append=true 不覆蓋既有 group
+
+- name: 確認 Docker service 啟動中
+  become: true
+  ansible.builtin.systemd:
+    name: docker
+    state: started
+    enabled: true

@@ -1,0 +1,53 @@
+---
+# Role: k3s
+# 安裝 k3s（single node，保留預設 traefik ingress）
+# 並將 kubeconfig 複製到 vm_user 家目錄，供後續 helm/kubectl 使用
+
+- name: 檢查 k3s 是否已安裝
+  ansible.builtin.command: k3s --version
+  register: k3s_check
+  ignore_errors: true
+  changed_when: false
+
+- name: 下載並執行 k3s 安裝腳本
+  become: true
+  ansible.builtin.shell:
+    cmd: curl -sfL https://get.k3s.io | sh -
+  when: k3s_check.rc != 0
+
+- name: 等待 k3s node 進入 Ready 狀態（最多 90 秒）
+  become: true
+  ansible.builtin.command:
+    cmd: k3s kubectl wait --for=condition=ready node --all --timeout=90s
+  changed_when: false
+
+- name: 建立 ~/.kube 目錄
+  ansible.builtin.file:
+    path: "{{ vm_home }}/.kube"
+    state: directory
+    owner: "{{ vm_user }}"
+    group: "{{ vm_user }}"
+    mode: "0755"
+
+- name: 複製 kubeconfig 到 {{ vm_home }}/.kube/config
+  become: true
+  ansible.builtin.copy:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: "{{ vm_home }}/.kube/config"
+    owner: "{{ vm_user }}"
+    group: "{{ vm_user }}"
+    mode: "0600"
+    remote_src: true   # src 在遠端（此處即本機）
+
+- name: 確認 kubectl 可用
+  become: true
+  become_user: "{{ vm_user }}"
+  ansible.builtin.command: kubectl get nodes
+  environment:
+    KUBECONFIG: "{{ vm_home }}/.kube/config"
+  register: kubectl_result
+  changed_when: false
+
+- name: 顯示 node 狀態
+  ansible.builtin.debug:
+    msg: "{{ kubectl_result.stdout_lines }}"

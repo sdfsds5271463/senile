@@ -1,0 +1,81 @@
+---
+# Role: php
+# 在系統層安裝 PHP 8.3 + 所有 CI/Runtime 需要的 extension
+# self-hosted runner 環境持久，不需要每次在 CI 重裝
+#
+# 安裝完畢後 CI 的 setup-php step 可直接移除
+
+- name: 新增 PHP 8.3 PPA（ondrej/php 是最廣泛使用的 PHP source）
+  become: true
+  ansible.builtin.apt_repository:
+    repo: ppa:ondrej/php
+    state: present
+    update_cache: true
+
+- name: 安裝 PHP 8.3 + 所有需要的 extension
+  become: true
+  ansible.builtin.apt:
+    name:
+      - php8.3
+      - php8.3-cli
+      - php8.3-fpm
+      - php8.3-mbstring
+      - php8.3-mysql        # pdo_mysql
+      - php8.3-xml          # 含 exif、dom
+      # php8.3-pcntl 不存在：pcntl 已內建於 php8.3-cli，無需單獨安裝
+      - php8.3-bcmath
+      - php8.3-gd
+      - php8.3-zip
+      - php8.3-redis
+      - php8.3-curl
+      - php8.3-intl
+      - php8.3-sqlite3      # 測試環境（.env.testing）使用 SQLite
+      - php8.3-opcache      # 與 Dockerfile opcache.ini 設定保持一致
+      # 以下已內建於 php8.3-cli，不需要單獨安裝：
+      # tokenizer, ctype, fileinfo, pdo, openssl, pcntl, json, readline
+      # 專案沒用到，不裝 → soap、imagick、imap
+    state: present
+
+- name: 檢查 Composer 是否已安裝
+  ansible.builtin.command: composer --version
+  register: composer_check
+  ignore_errors: true
+  changed_when: false
+
+- name: 下載並安裝 Composer
+  become: true
+  ansible.builtin.shell:
+    cmd: |
+      php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+      php composer-setup.php --install-dir=/usr/local/bin --filename=composer
+      php -r "unlink('composer-setup.php');"
+    chdir: /tmp
+  when: composer_check.rc != 0
+
+- name: 確認 PHP 版本
+  ansible.builtin.command: php -v
+  register: php_version
+  changed_when: false
+
+- name: 顯示 PHP 版本
+  ansible.builtin.debug:
+    msg: "{{ php_version.stdout_lines[0] }}"
+
+- name: 確認關鍵 extension 已載入
+  ansible.builtin.command: php -m
+  register: php_modules
+  changed_when: false
+
+- name: 驗證必要 extension 存在
+  ansible.builtin.assert:
+    that:
+      - "'mbstring' in php_modules.stdout"
+      - "'pdo_mysql' in php_modules.stdout"
+      - "'bcmath' in php_modules.stdout"
+      - "'gd' in php_modules.stdout"
+      - "'zip' in php_modules.stdout"
+      - "'redis' in php_modules.stdout"
+      - "'sqlite3' in php_modules.stdout"
+      - "'Zend OPcache' in php_modules.stdout"
+    fail_msg: "有 extension 缺失，請檢查安裝 log"
+    success_msg: "所有必要 extension 已就位"

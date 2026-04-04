@@ -1,0 +1,18 @@
+---
+# Role: docker_login
+# 以 vm_user 身份登入 Docker Hub
+# 注意：become_user 切換至 vm_user，credentials 存入該使用者的 ~/.docker/config.json
+
+- name: 登入 Docker Hub（manualsmash）
+  become: true
+  become_user: "{{ vm_user }}"
+  ansible.builtin.shell:
+    # echo pipe 避免 token 出現在 process list
+    cmd: "echo '{{ dockerhub_token }}' | docker login -u '{{ dockerhub_username }}' --password-stdin"
+  register: docker_login_result
+  changed_when: "'Login Succeeded' in docker_login_result.stdout"
+  no_log: true   # 避免 token 印在 ansible 輸出中
+
+- name: 確認登入成功
+  ansible.builtin.debug:
+    msg: "Docker Hub 登入狀態：{{ docker_login_result.stdout }}"

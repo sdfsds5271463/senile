@@ -1,0 +1,95 @@
+---
+# Role: github_runner
+# 下載、設定並以 systemd service 啟動 GitHub Actions self-hosted runner
+#
+# 冪等設計：
+#   - tarball 已存在 → 跳過下載
+#   - .runner 設定檔已存在 → 跳過 config（避免重複消耗 token）
+#   - service 已啟動 → systemd 不重複安裝
+
+- name: 設定 runner 路徑變數
+  ansible.builtin.set_fact:
+    runner_path: "{{ vm_home }}/{{ runner_dir }}"
+    runner_tarball: "actions-runner-linux-x64-{{ runner_version }}.tar.gz"
+
+- name: 建立 runner 目錄（{{ runner_path }}）
+  ansible.builtin.file:
+    path: "{{ runner_path }}"
+    state: directory
+    owner: "{{ vm_user }}"
+    group: "{{ vm_user }}"
+    mode: "0755"
+
+- name: 檢查 runner 是否已解壓縮
+  ansible.builtin.stat:
+    path: "{{ runner_path }}/run.sh"
+  register: runner_extracted
+
+- name: 下載 runner tarball v{{ runner_version }}
+  become: true
+  become_user: "{{ vm_user }}"
+  ansible.builtin.get_url:
+    url: "https://github.com/actions/runner/releases/download/v{{ runner_version }}/actions-runner-linux-x64-{{ runner_version }}.tar.gz"
+    dest: "{{ runner_path }}/{{ runner_tarball }}"
+    mode: "0644"
+  when: not runner_extracted.stat.exists
+
+- name: 解壓縮 runner tarball
+  become: true
+  become_user: "{{ vm_user }}"
+  ansible.builtin.unarchive:
+    src: "{{ runner_path }}/{{ runner_tarball }}"
+    dest: "{{ runner_path }}"
+    remote_src: true
+  when: not runner_extracted.stat.exists
+
+- name: 檢查 runner 是否已設定（.runner 設定檔存在）
+  ansible.builtin.stat:
+    path: "{{ runner_path }}/.runner"
+  register: runner_configured
+
+# --replace 允許在同一 repo 重新設定（同名 runner 會被取代）
+- name: 設定 runner（連接至 github.com/{{ github_repo }}）
+  become: true
+  become_user: "{{ vm_user }}"
+  ansible.builtin.command:
+    cmd: >
+      ./config.sh
+      --url https://github.com/{{ github_repo }}
+      --token {{ gh_runner_token }}
+      --name {{ ansible_hostname }}-runner
+      --labels self-hosted,linux,x64
+      --unattended
+      --replace
+    chdir: "{{ runner_path }}"
+  when: not runner_configured.stat.exists
+  no_log: true   # 避免 token 出現在輸出
+
+- name: 安裝 runner 為 systemd service
+  become: true
+  ansible.builtin.command:
+    cmd: ./svc.sh install {{ vm_user }}
+    chdir: "{{ runner_path }}"
+  register: svc_install
+  # svc.sh install 在已安裝時會回傳錯誤，用 ignore_errors 並在後面判斷
+  ignore_errors: true
+  changed_when: "'Unit file' in svc_install.stdout or svc_install.rc == 0"
+
+- name: 啟動 runner service
+  become: true
+  ansible.builtin.command:
+    cmd: ./svc.sh start
+    chdir: "{{ runner_path }}"
+  changed_when: true
+
+- name: 確認 runner service 狀態
+  become: true
+  ansible.builtin.command:
+    cmd: ./svc.sh status
+    chdir: "{{ runner_path }}"
+  register: runner_status
+  changed_when: false
+
+- name: 顯示 runner 狀態
+  ansible.builtin.debug:
+    msg: "{{ runner_status.stdout_lines }}"

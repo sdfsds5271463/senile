@@ -1,0 +1,92 @@
+services:
+  # --- 基礎設施 ---
+  mysql:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-senile_db}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}   # root 的密碼 (雖然你不用它登入，但它是必填項)
+      MYSQL_USER: ${DB_USERNAME:-allen}  # 自訂使用者
+      MYSQL_PASSWORD: ${DB_PASSWORD:-root}
+    ports:
+      - "3306:3306"
+
+  redis:
+    image: redis:alpine
+    restart: always
+
+  # --- Laravel 主程式 (FPM) ---
+  app:
+    build: .
+    volumes:
+      #- .:/var/www  #掛載全部較慢，掛載下面僅需要的
+      - ./app:/var/www/app
+      - ./config:/var/www/config
+      - ./routes:/var/www/routes
+      - ./resources:/var/www/resources
+      - ./database:/var/www/database
+      - ./public:/var/www/public
+      - ./tests:/var/www/tests
+      - ./storage:/var/www/storage
+    depends_on:
+      - mysql
+      - redis
+    env_file: .env
+    environment:
+      - DB_HOST=mysql
+      - REDIS_HOST=redis
+      - CACHE_STORE=redis
+      - SESSION_DRIVER=redis
+      - QUEUE_CONNECTION=redis
+      - INERTIA_SSR_URL=http://ssr:13714
+
+  # --- Inertia SSR Server ---
+  ssr:
+    build: .
+    volumes:
+      #- .:/var/www  #掛載全部較慢，掛載下面僅需要的
+      - ./config:/var/www/config
+      - ./public:/var/www/public
+      - ./storage:/var/www/storage
+    command: php artisan inertia:start-ssr
+    depends_on:
+      - app
+    env_file: .env
+    environment:
+      - DB_HOST=mysql
+      - REDIS_HOST=redis
+      - INERTIA_SSR_URL=http://ssr:13714
+
+  # --- Queue Worker ---
+  worker:
+    build: .
+    command: php artisan queue:work
+    depends_on:
+      - app
+    env_file: .env
+    environment:
+      - DB_HOST=mysql
+      - REDIS_HOST=redis
+
+  # --- Scheduler ---
+  scheduler:
+    build: .
+    command: sh -c "while [ true ]; do php artisan schedule:run --no-interaction & sleep 60; done"
+    depends_on:
+      - app
+    env_file: .env
+    environment:
+      - DB_HOST=mysql
+      - REDIS_HOST=redis
+
+  # --- Nginx (作為入口點) ---
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      #- .:/var/www  #掛載全部較慢，掛載下面僅需要的
+      - ./public:/var/www/public
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app

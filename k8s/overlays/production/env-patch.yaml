@@ -1,0 +1,42 @@
+# ConfigMap patch：注入 production 環境變數
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: laravel-config
+data:
+  APP_ENV: "production"
+  APP_DEBUG: "false"
+---
+# Deployment patch：production 跑 2 replicas
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: laravel-app
+spec:
+  replicas: 2
+---
+# Secret patch：覆寫 production DB_PASSWORD
+apiVersion: v1
+kind: Secret
+metadata:
+  name: laravel-secret
+data:
+  DB_PASSWORD: dHQxMjM0NTY=
+---
+# Ingress patch：production 使用 laravel.local
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: laravel-ingress
+spec:
+  rules:
+    - host: laravel.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: laravel-app-service
+                port:
+                  number: 80

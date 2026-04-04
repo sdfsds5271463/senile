@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: production
+
+resources:
+  - ../../base
+  - db.yaml       # dev 獨立的 MySQL + Redis
+  
+# CI 會用 sed 更新此 tag：
+#   sed -i "/manualsmash\/senile-app/{n;s|newTag:.*|newTag: ${TAG}|}" "${OVERLAY}/kustomization.yaml"
+images:
+  - name: manualsmash/senile-app
+    newTag: main-5b31e43f586174cc0fe3df40fc4e25b41551ac86
+
+patches:
+- path: env-patch.yaml

@@ -1,0 +1,12 @@
+---
+# Role: hosts_file
+# 將 laravel.local 和 dev.laravel.local 加入到 /etc/hosts 文件
+# lineinfile 模組是冪等的（不會加入已存在的行）
+
+- name: "將 {{ item.names }} 新增到 /etc/hosts 文件"
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: "{{ item.ip }} {{ item.names }}"
+    state: present
+  loop: "{{ hosts_entries }}"

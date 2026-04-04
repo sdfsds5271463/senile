@@ -1,0 +1,184 @@
+name: Build and Create Deployment PR
+
+on:
+  push:
+    branches: [ "main", "dev" ]   # 兩條線都觸發
+    paths-ignore:
+      - 'k8s/**'   # k8s manifest 變動（CI 自動更新的）不再觸發，避免循環
+
+permissions:
+  contents: write        # 回推 git 寫入權限
+  pull-requests: write   # PR 寫入權限
+
+jobs:
+  build-and-push:
+    runs-on: self-hosted
+    env:
+      KUBECONFIG: /home/allen/.kube/config
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 2   # 需要 ~1 來比對上一個 commit
+
+      # ── 動態變數：依 branch 決定 image tag 前綴與 overlay 路徑 ──────────────
+      # branch → overlay 映射：main = production, dev = dev
+      - name: Set branch-specific variables
+        id: vars
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          IMAGE_TAG="${BRANCH}-${{ github.sha }}"
+
+          if [ "${BRANCH}" = "main" ]; then
+            OVERLAY_DIR="k8s/overlays/production"
+          else
+            OVERLAY_DIR="k8s/overlays/${BRANCH}"
+          fi
+
+          echo "branch=${BRANCH}"           >> $GITHUB_OUTPUT
+          echo "image_tag=${IMAGE_TAG}"     >> $GITHUB_OUTPUT
+          echo "overlay_dir=${OVERLAY_DIR}" >> $GITHUB_OUTPUT
+          echo "image=manualsmash/senile-app:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+
+      # ── CI 測試 ─────────────────────────────────────────────────────────────
+      # PHP 8.3 + extension 已由 Ansible 固化在 runner VM 上，不需要 setup-php
+      - name: Install Composer Dependencies for Testing
+        run: |
+          composer install --no-interaction --prefer-dist
+          cp .env.testing .env
+          php artisan key:generate
+
+      - name: Run Unit and Feature Tests
+        run: php artisan test tests/Feature/TestServiceTest.php --testdox
+
+      # ── Docker Hub 登入 + Build + Push ──────────────────────────────────────
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Docker Image
+        run: |
+          docker build -t ${{ steps.vars.outputs.image }} .
+          docker push ${{ steps.vars.outputs.image }}
+
+      # ── 更新對應 overlay 的 kustomization.yaml image tag ────────────────────
+      - name: Update Kustomize Image Tag
+        run: |
+          BRANCH="${{ steps.vars.outputs.branch }}"
+          TAG="${{ steps.vars.outputs.image_tag }}"
+          OVERLAY="${{ steps.vars.outputs.overlay_dir }}"
+
+          echo "BRANCH / TAG / OVERLAY"
+          echo $BRANCH    #main
+          echo $TAG       #main-2f4ba14c41f9749e4b4070759ec36b5ee8a8bf0a
+          echo $OVERLAY   #k8s/overlays/production
+
+          # 替換 kustomization.yaml 中的 newTag
+          sed -i "/manualsmash\/senile-app/{n;s|newTag:.*|newTag: ${TAG}|}" "${OVERLAY}/kustomization.yaml"
+
+          # 檢查替換後的結果 (Debug 用)
+          echo "Updated kustomization.yaml:"
+          cat "${OVERLAY}/kustomization.yaml" | grep "newTag"
+
+      # ── 取得 commit 資訊（PR body 用）──────────────────────────────────────
+      - name: Get Commit Info
+        id: commit_info
+        run: |
+          # 處理 Commit Message (使用 EOF 避免格式錯誤)
+          echo "message<<EOF" >> $GITHUB_OUTPUT
+          git log -1 --pretty=%B ${{ github.sha }} | head -5 >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          echo "author=$(git log -1 --pretty='%an <%ae>' ${{ github.sha }})"   >> $GITHUB_OUTPUT
+          echo "short_sha=$(echo ${{ github.sha }} | cut -c1-7)"               >> $GITHUB_OUTPUT
+
+      # ── 建立 PR（merge 回觸發的那條線）────────────────────────────────────
+      - name: Create Pull Request for Deployment
+        id: create_pr
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ secrets.MY_PAT }}
+          commit-message: "chore: deploy [${{ steps.vars.outputs.branch }}] [${{ steps.commit_info.outputs.short_sha }}] ${{ steps.commit_info.outputs.message }}"
+          branch: "deploy/${{ steps.vars.outputs.branch }}-${{ github.run_number }}"
+          delete-branch: true
+          title: "[${{ steps.vars.outputs.branch }}] 升級版本至 [${{ steps.commit_info.outputs.short_sha }}] ${{ steps.commit_info.outputs.message }}"
+          body: |
+            ## 📦 自動化部署預檢報告
+
+            ### 🔍 本次部署內容
+            - **環境**: `${{ steps.vars.outputs.branch }}`
+            - **觸發 Commit**: [`${{ steps.commit_info.outputs.short_sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
+            - **作者**: ${{ steps.commit_info.outputs.author }}
+            - **Commit 訊息**: ${{ steps.commit_info.outputs.message }}
+
+            > ⚠️ 此 PR 的 diff 僅含 kustomization.yaml image tag 更新（CI 自動產生），實際程式碼變更請見上方 Commit 連結。
+
+            ### 📦 部署資訊
+            - **新的 Image**: `${{ steps.vars.outputs.image }}`
+            - **Overlay 路徑**: `${{ steps.vars.outputs.overlay_dir }}`
+            - **狀態**: 已成功推送至 Docker Hub。
+            - **操作**: 合併此 PR 後，ArgoCD 將自動感應並執行 K3s 滾動更新。
+          base: ${{ steps.vars.outputs.branch }}   # 動態：push 到哪條線就 PR 回哪條線
+
+      # ── 請 CodeRabbit 審查實際程式碼變更 ───────────────────────────────────
+      - name: Request CodeRabbit Review on Actual Code Changes
+        if: steps.create_pr.outputs.pull-request-number != ''
+        env:
+          MY_PAT: ${{ secrets.MY_PAT }}
+          PR_NUMBER: ${{ steps.create_pr.outputs.pull-request-number }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+          SHORT_SHA: ${{ steps.commit_info.outputs.short_sha }}
+          SERVER_URL: ${{ github.server_url }}
+          BRANCH: ${{ steps.vars.outputs.branch }}
+        run: |
+          python3 << 'PYEOF'
+          import os, subprocess, json, urllib.request
+
+          sha        = os.environ['SHA']
+          before_sha = os.environ['BEFORE_SHA']
+          short_sha  = os.environ['SHORT_SHA']
+          repo       = os.environ['REPO']
+          server_url = os.environ['SERVER_URL']
+          pr_number  = os.environ['PR_NUMBER']
+          token      = os.environ['MY_PAT']
+          branch     = os.environ['BRANCH']
+
+          # 新分支第一次 push 時 before_sha 全為 0，退回只看最後一個 commit
+          from_sha = before_sha if before_sha and before_sha != '0' * 40 else f'{sha}~1'
+
+          result = subprocess.run(
+              ['git', 'diff', from_sha, sha, '--stat',
+               '--', ':!k8s/', ':!composer.lock', ':!package-lock.json'],
+              capture_output=True, text=True
+          )
+          diff_stat = result.stdout.strip()[:2000] or '(no code changes outside k8s/)'
+
+          commit_url = f'{server_url}/{repo}/commit/{sha}'
+          body = (
+              f'@coderabbitai\n\n'
+              f'請查看實際程式碼更改 from `{before_sha[:7]}` to [`{short_sha}`]({commit_url}) '
+              f'（branch: `{branch}`），'
+              f'而不是 Kubernetes image tag 的更新。\n\n'
+              f'**更改文件摘要：**\n```\n{diff_stat}\n```'
+          )
+
+          payload = json.dumps({'body': body}).encode()
+          req = urllib.request.Request(
+              f'https://api.github.com/repos/{repo}/issues/{pr_number}/comments',
+              data=payload,
+              headers={
+                  'Authorization': f'token {token}',
+                  'Accept': 'application/vnd.github.v3+json',
+                  'Content-Type': 'application/json',
+              },
+              method='POST'
+          )
+          with urllib.request.urlopen(req) as resp:
+              print(f'Comment posted: HTTP {resp.status}')
+          PYEOF

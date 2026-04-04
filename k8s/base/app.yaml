@@ -1,0 +1,154 @@
+# nginx 設定 ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+data:
+  default.conf: |
+    server {
+        listen 80;
+        index index.php index.html;
+        root /var/www/public;
+
+        location ~* \.(?:ico|css|js|gif|jpe?g|png|woff2?|ttf|svg|eot)$ {
+            try_files $uri =404;
+            expires 6M;
+            access_log off;
+            add_header Cache-Control "public";
+        }
+
+        location / {
+            try_files $uri $uri/ /index.php?$query_string;
+        }
+
+        location ~ \.php$ {
+            include fastcgi_params;
+            fastcgi_pass 127.0.0.1:9000;
+            fastcgi_index index.php;
+            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        }
+
+        location ~ /\.ht {
+            deny all;
+        }
+
+        # nginx-prometheus-exporter 專用，只允許本機存取
+        location /stub_status {
+            stub_status;
+            allow 127.0.0.1;
+            deny all;
+        }
+    }
+---
+# Sidecar Pattern（php-fpm + nginx 同 Pod）
+# replicas 在 base 設為 1，由 overlay 的 env-patch.yaml 覆寫
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: laravel-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: laravel-nginx
+  template:
+    metadata:
+      labels:
+        app: laravel-nginx
+    spec:
+      initContainers:
+      - name: install-assets
+        image: manualsmash/senile-app:placeholder
+        imagePullPolicy: Always
+        command: ["cp", "-rv", "/var/www/public/.", "/shared-public"]
+        volumeMounts:
+        - name: shared-assets
+          mountPath: /shared-public
+
+      containers:
+      - name: php
+        image: manualsmash/senile-app:placeholder
+        imagePullPolicy: Always
+        volumeMounts:
+          - name: shared-assets
+            mountPath: /var/www/public
+        envFrom:
+        - configMapRef:
+            name: laravel-config
+        - secretRef:
+            name: laravel-secret
+        livenessProbe:
+          tcpSocket:
+            port: 9000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+
+      - name: nginx
+        image: nginx:alpine
+        ports:
+          - containerPort: 80
+            name: http
+        volumeMounts:
+          - name: nginx-config
+            mountPath: /etc/nginx/conf.d
+          - name: shared-assets
+            mountPath: /var/www/public
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+
+      # nginx 指標 exporter：將 stub_status 轉換為 Prometheus 格式
+      - name: nginx-exporter
+        image: nginx/nginx-prometheus-exporter:1.3
+        args:
+          - --nginx.scrape-uri=http://127.0.0.1/stub_status
+        ports:
+          - containerPort: 9113
+            name: metrics
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: nginx-config
+        - name: shared-assets
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: laravel-app-service
+spec:
+  selector:
+    app: laravel-nginx
+  ports:
+    - port: 80
+      targetPort: 80
+---
+# Ingress host 由 overlay 的 env-patch.yaml 覆寫
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: laravel-ingress
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: laravel.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: laravel-app-service
+                port:
+                  number: 80

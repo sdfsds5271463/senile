@@ -1,0 +1,27 @@
+---
+# 主 Playbook：依序執行所有 role
+# 執行指令：ansible-playbook -i inventory.ini site.yml --ask-become-pass
+#
+# vars_prompt 會在執行前互動式詢問敏感值，不會寫入任何檔案
+
+- name: Bootstrap VM - 安裝系統工具
+  hosts: local
+  become: false   # 各 role 內部需要 root 的 task 自行設定 become: true
+
+  vars_prompt:
+    - name: dockerhub_token
+      prompt: "[1/2] 請輸入 Docker Hub Access Token"
+      private: true   # 輸入時不顯示字元
+
+    - name: gh_runner_token
+      prompt: "[2/2] 請輸入 GitHub Actions Runner Token（有效期 1 小時）"
+      private: true
+
+  roles:
+    - role: hosts_file      # /etc/hosts 加入 laravel.local
+    - role: docker          # 安裝 Docker + 加入 docker group
+    - role: docker_login    # Docker Hub 登入
+    - role: k3s             # 安裝 k3s + 設定 kubeconfig
+    - role: helm            # 安裝 Helm
+    - role: php             # 安裝 PHP 8.3 + 所有 extension（CI 不再需要 setup-php）
+    - role: github_runner   # 安裝並啟動 GitHub Actions runner
