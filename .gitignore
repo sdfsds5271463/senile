@@ -32,6 +32,7 @@ yarn-error.log
 /.vscode
 /.zed
 .DS_Store
+.cache/
 
 # 以下本地測試用
 /doc
