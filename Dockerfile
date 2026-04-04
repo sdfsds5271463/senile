@@ -19,7 +19,6 @@ FROM php:8.3-fpm
 
 # 1. 安裝系統套件與清理快取
 RUN apt-get update && apt-get install -y \
-    git \
     curl \
     libpng-dev \
     libonig-dev \
