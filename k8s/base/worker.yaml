@@ -16,7 +16,7 @@ spec:
       containers:
       - name: ssr
         image: manualsmash/senile-app:placeholder
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         command: ["php", "artisan", "inertia:start-ssr"]
         ports:
         - containerPort: 13714
@@ -25,6 +25,13 @@ spec:
             name: laravel-config
         - secretRef:
             name: laravel-secret
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
         livenessProbe:
           tcpSocket:
             port: 13714
@@ -61,13 +68,20 @@ spec:
       containers:
       - name: worker
         image: manualsmash/senile-app:placeholder
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         command: ["php", "artisan", "queue:work", "--verbose", "--tries=3", "--timeout=90"]
         envFrom:
         - configMapRef:
             name: laravel-config
         - secretRef:
             name: laravel-secret
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
 ---
 # Scheduler（replicas 絕對不超過 1）
 apiVersion: apps/v1
@@ -87,10 +101,17 @@ spec:
       containers:
       - name: scheduler
         image: manualsmash/senile-app:placeholder
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         command: ["sh", "-c", "while [ true ]; do php artisan schedule:run --no-interaction; sleep 60; done"]
         envFrom:
         - configMapRef:
             name: laravel-config
         - secretRef:
             name: laravel-secret
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "20m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"

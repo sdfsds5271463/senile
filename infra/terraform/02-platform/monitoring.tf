@@ -54,7 +54,7 @@ resource "helm_release" "kube_prometheus_stack" {
 
     # ── Alertmanager（關閉，省 RAM）──────────────────────────────────────────
     alertmanager:
-      enabled: false
+      enabled: false    # 目前使用 Grafana 通知，不需要開啟這
 
     # ── node-exporter（蒐集 VM 系統指標）────────────────────────────────────
     nodeExporter:
