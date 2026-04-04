@@ -32,4 +32,7 @@ yarn-error.log
 /.vscode
 /.zed
 .DS_Store
+
+# 以下本地測試用
 /doc
+api-token.txt
