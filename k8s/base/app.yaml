@@ -84,11 +84,20 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 33    # www-data（Debian php:8.3-fpm 預設）
         livenessProbe:
           tcpSocket:
             port: 9000
           initialDelaySeconds: 10
           periodSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 9000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 3
 
       - name: nginx
         image: nginx:alpine
@@ -107,12 +116,22 @@ spec:
           limits:
             memory: "64Mi"
             cpu: "100m"
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 101   # nginx（nginx:alpine 預設）
         livenessProbe:
           httpGet:
             path: /
             port: 80
           initialDelaySeconds: 10
           periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 3
 
       # nginx 指標 exporter：將 stub_status 轉換為 Prometheus 格式
       - name: nginx-exporter
