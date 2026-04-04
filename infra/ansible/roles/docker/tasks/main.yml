@@ -9,10 +9,10 @@
   ignore_errors: true
   changed_when: false   # 純查詢，不算 changed
 
-- name: 下載並執行 Docker 安裝腳本
+- name: 下載並執行 Docker 安裝腳本（固定版本 {{ docker_version }}）
   become: true
   ansible.builtin.shell:
-    cmd: curl -fsSL https://get.docker.com | sh
+    cmd: curl -fsSL https://get.docker.com | VERSION="{{ docker_version }}" sh
   when: docker_check.rc != 0   # 只在未安裝時執行
 
 - name: 確保 docker group 存在

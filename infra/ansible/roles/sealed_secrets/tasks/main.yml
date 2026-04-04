@@ -3,6 +3,7 @@
 # 安裝 Bitnami Sealed Secrets：
 #   1. 部署 sealed-secrets-controller 到 k3s（kube-system）
 #   2. 安裝 kubeseal CLI 到本機
+# 版本由 group_vars/all.yml 的 sealed_secrets_version 統一控制
 # 冪等：先檢查資源是否已存在，存在則跳過
 
 - name: 檢查 sealed-secrets-controller 是否已部署
@@ -12,10 +13,10 @@
   ignore_errors: true
   changed_when: false
 
-- name: 部署 sealed-secrets-controller
+- name: 部署 sealed-secrets-controller v{{ sealed_secrets_version }}
   ansible.builtin.command: >
     kubectl apply -f
-    https://github.com/bitnami-labs/sealed-secrets/releases/latest/download/controller.yaml
+    https://github.com/bitnami-labs/sealed-secrets/releases/download/v{{ sealed_secrets_version }}/controller.yaml
   when: controller_check.rc != 0
 
 - name: 等待 sealed-secrets-controller 就緒
@@ -23,16 +24,14 @@
     kubectl rollout status deployment/sealed-secrets-controller -n kube-system --timeout=120s
   when: controller_check.rc != 0
 
-- name: 取得 kubeseal 最新版本號
-  ansible.builtin.uri:
-    url: https://api.github.com/repos/bitnami-labs/sealed-secrets/releases/latest
-    return_content: true
-  register: kubeseal_release
-  changed_when: false
-
-- name: 設定 kubeseal 版本變數（去除 v 前綴）
+- name: 偵測系統架構（x86_64 → amd64，aarch64 → arm64）
   ansible.builtin.set_fact:
-    kubeseal_version: "{{ kubeseal_release.json.tag_name | regex_replace('^v', '') }}"
+    kubeseal_arch: >-
+      {{
+        'amd64'  if ansible_architecture == 'x86_64'  else
+        'arm64'  if ansible_architecture == 'aarch64' else
+        ansible_architecture
+      }}
 
 - name: 檢查 kubeseal 是否已安裝
   ansible.builtin.command: kubeseal --version
@@ -40,10 +39,10 @@
   ignore_errors: true
   changed_when: false
 
-- name: 下載 kubeseal binary
+- name: 下載 kubeseal v{{ sealed_secrets_version }} binary
   become: true
   ansible.builtin.get_url:
-    url: "https://github.com/bitnami-labs/sealed-secrets/releases/download/v{{ kubeseal_version }}/kubeseal-{{ kubeseal_version }}-linux-amd64.tar.gz"
+    url: "https://github.com/bitnami-labs/sealed-secrets/releases/download/v{{ sealed_secrets_version }}/kubeseal-{{ sealed_secrets_version }}-linux-{{ kubeseal_arch }}.tar.gz"
     dest: /tmp/kubeseal.tar.gz
     mode: '0644'
   when: kubeseal_check.rc != 0
@@ -63,6 +62,16 @@
     dest: /usr/local/bin/kubeseal
     mode: '0755'
     remote_src: true
+  when: kubeseal_check.rc != 0
+
+- name: 清理 kubeseal 暫存檔
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /tmp/kubeseal.tar.gz
+    - /tmp/kubeseal
   when: kubeseal_check.rc != 0
 
 - name: 確認 kubeseal 版本

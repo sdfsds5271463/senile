@@ -6,6 +6,7 @@ resource "helm_release" "kube_prometheus_stack" {
   name       = "kube-prometheus-stack"
   repository = "https://prometheus-community.github.io/helm-charts"
   chart      = "kube-prometheus-stack"
+  version    = "82.17.1"
   namespace  = kubernetes_namespace.monitoring.metadata[0].name
   wait       = true
   timeout    = 300

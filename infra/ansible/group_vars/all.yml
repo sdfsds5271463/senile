@@ -12,6 +12,12 @@ runner_version: "2.322.0"
 runner_dir: "actions-runner"
 # gh_runner_token → 執行時由 vars_prompt 輸入，不存這裡
 
+# ── 工具版本（固定版本，避免 latest 造成非預期升級）────────────
+k3s_version: "v1.35.3+k3s1"
+docker_version: "29.3.1"
+helm_version: "v3.20.1"
+sealed_secrets_version: "0.36.1"
+
 # ── /etc/hosts ───────────────────────────────────────────────
 hosts_entries:
   - ip: "127.0.0.1"

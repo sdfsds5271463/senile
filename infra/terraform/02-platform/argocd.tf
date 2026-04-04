@@ -9,7 +9,7 @@ resource "helm_release" "argocd" {
   name       = "argocd"
   repository = "https://argoproj.github.io/argo-helm"
   chart      = "argo-cd"
-  version    = var.argocd_chart_version != "" ? var.argocd_chart_version : null
+  version    = var.argocd_chart_version
   namespace  = kubernetes_namespace.argocd.metadata[0].name
 
   # 等待所有 pod 就緒才算 apply 完成

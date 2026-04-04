@@ -17,9 +17,9 @@ variable "argocd_namespace" {
 }
 
 variable "argocd_chart_version" {
-  description = "ArgoCD Helm chart 版本（空字串 = 使用最新版）"
+  description = "ArgoCD Helm chart 版本"
   type        = string
-  default     = ""
+  default     = "9.4.17"
 }
 
 variable "grafana_admin_password" {

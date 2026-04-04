@@ -36,3 +36,4 @@ yarn-error.log
 # 以下本地測試用
 /doc
 api-token.txt
+.claude

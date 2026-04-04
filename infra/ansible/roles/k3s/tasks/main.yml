@@ -9,10 +9,10 @@
   ignore_errors: true
   changed_when: false
 
-- name: 下載並執行 k3s 安裝腳本
+- name: 下載並執行 k3s 安裝腳本（固定版本 {{ k3s_version }}）
   become: true
   ansible.builtin.shell:
-    cmd: curl -sfL https://get.k3s.io | sh -
+    cmd: curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="{{ k3s_version }}" sh -
   when: k3s_check.rc != 0
 
 - name: 等待 k3s node 進入 Ready 狀態（最多 90 秒）
