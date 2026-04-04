@@ -45,11 +45,25 @@ try {
     $countBefore = (int) $pdo->query("SELECT COUNT(*) FROM migrations")->fetchColumn();
 } catch (PDOException $e) {
     // migrations 表還不存在 = 全新資料庫
+    echo "WARNING: Could not read migrations table after migrate: " . $e->getMessage() . "\n";
     $countBefore = 0;
 }
 
+// 先記住 app user 的帳密，seeder 還原用
+$appUser = getenv('DB_USERNAME');
+$appPass = getenv('DB_PASSWORD');
+
+// artisan migrate 必須以 migration_dbuser 執行（需要 DDL 權限）
+// putenv 覆蓋當前行程的環境變數，子行程（passthru）會繼承
+putenv("DB_USERNAME={$user}");
+putenv("DB_PASSWORD={$pass}");
+
 echo "Running migrations...\n";
 passthru('php /var/www/artisan migrate --force', $exitCode);
+
+// 還原為 app user，seeder 只需要 INSERT/SELECT 權限
+putenv("DB_USERNAME={$appUser}");
+putenv("DB_PASSWORD={$appPass}");
 
 if ($exitCode !== 0) {
     $pdo->query("SELECT RELEASE_LOCK('laravel_migration_lock')");
