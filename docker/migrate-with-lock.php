@@ -31,6 +31,15 @@ try {
     exit(1);
 }
 
+function releaseLock(PDO $pdo): void {
+    try {
+        $pdo->query("SELECT RELEASE_LOCK('laravel_migration_lock')");
+        echo "Migration lock released.\n";
+    } catch (PDOException $e) {
+        echo "WARNING: Failed to release migration lock: " . $e->getMessage() . "\n";
+    }
+}
+
 echo "Acquiring migration lock (timeout 120s)...\n";
 $result = $pdo->query("SELECT GET_LOCK('laravel_migration_lock', 120)")->fetchColumn();
 
@@ -45,7 +54,7 @@ try {
     $countBefore = (int) $pdo->query("SELECT COUNT(*) FROM migrations")->fetchColumn();
 } catch (PDOException $e) {
     // migrations 表還不存在 = 全新資料庫
-    echo "WARNING: Could not read migrations table after migrate: " . $e->getMessage() . "\n";
+    echo "WARNING: Could not read migrations table before migrate: " . $e->getMessage() . "\n";
     $countBefore = 0;
 }
 
@@ -66,7 +75,7 @@ putenv("DB_USERNAME={$appUser}");
 putenv("DB_PASSWORD={$appPass}");
 
 if ($exitCode !== 0) {
-    $pdo->query("SELECT RELEASE_LOCK('laravel_migration_lock')");
+    releaseLock($pdo);
     exit($exitCode);
 }
 
@@ -83,14 +92,13 @@ if ($newMigrations > 0) {
     passthru('php /var/www/artisan db:seed --class=AllenUserSeeder --force', $exitCode);
 
     if ($exitCode !== 0) {
-        $pdo->query("SELECT RELEASE_LOCK('laravel_migration_lock')");
+        releaseLock($pdo);
         exit($exitCode);
     }
 } else {
     echo "No new migrations. Skipping seeder.\n";
 }
 
-$pdo->query("SELECT RELEASE_LOCK('laravel_migration_lock')");
-echo "Migration lock released.\n";
+releaseLock($pdo);
 
 exit(0);

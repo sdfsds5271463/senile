@@ -6,6 +6,8 @@ namespace: production
 resources:
   - ../../base
   - db.yaml       # dev 獨立的 MySQL + Redis
+  - sealed-secret.yaml   # SealedSecret 加密密碼，與 kind: Secret 強衝突
+                         #   使用 Secret 則 sealed-secret.yaml 清空； 使用 sealed-secret.yaml 則 Secret 全註解掉
   
 # CI 會用 sed 更新此 tag：
 #   sed -i "/manualsmash\/senile-app/{n;s|newTag:.*|newTag: ${TAG}|}" "${OVERLAY}/kustomization.yaml"

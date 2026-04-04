@@ -23,5 +23,6 @@
     - role: docker_login    # Docker Hub 登入
     - role: k3s             # 安裝 k3s + 設定 kubeconfig
     - role: helm            # 安裝 Helm
+    - role: sealed_secrets  # 安裝 sealed-secrets-controller + kubeseal CLI
     - role: php             # 安裝 PHP 8.3 + 所有 extension（CI 不再需要 setup-php）
     - role: github_runner   # 安裝並啟動 GitHub Actions runner

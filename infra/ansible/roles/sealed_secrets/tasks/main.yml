@@ -1,0 +1,75 @@
+---
+# Role: sealed_secrets
+# 安裝 Bitnami Sealed Secrets：
+#   1. 部署 sealed-secrets-controller 到 k3s（kube-system）
+#   2. 安裝 kubeseal CLI 到本機
+# 冪等：先檢查資源是否已存在，存在則跳過
+
+- name: 檢查 sealed-secrets-controller 是否已部署
+  ansible.builtin.command: >
+    kubectl get deployment sealed-secrets-controller -n kube-system
+  register: controller_check
+  ignore_errors: true
+  changed_when: false
+
+- name: 部署 sealed-secrets-controller
+  ansible.builtin.command: >
+    kubectl apply -f
+    https://github.com/bitnami-labs/sealed-secrets/releases/latest/download/controller.yaml
+  when: controller_check.rc != 0
+
+- name: 等待 sealed-secrets-controller 就緒
+  ansible.builtin.command: >
+    kubectl rollout status deployment/sealed-secrets-controller -n kube-system --timeout=120s
+  when: controller_check.rc != 0
+
+- name: 取得 kubeseal 最新版本號
+  ansible.builtin.uri:
+    url: https://api.github.com/repos/bitnami-labs/sealed-secrets/releases/latest
+    return_content: true
+  register: kubeseal_release
+  changed_when: false
+
+- name: 設定 kubeseal 版本變數（去除 v 前綴）
+  ansible.builtin.set_fact:
+    kubeseal_version: "{{ kubeseal_release.json.tag_name | regex_replace('^v', '') }}"
+
+- name: 檢查 kubeseal 是否已安裝
+  ansible.builtin.command: kubeseal --version
+  register: kubeseal_check
+  ignore_errors: true
+  changed_when: false
+
+- name: 下載 kubeseal binary
+  become: true
+  ansible.builtin.get_url:
+    url: "https://github.com/bitnami-labs/sealed-secrets/releases/download/v{{ kubeseal_version }}/kubeseal-{{ kubeseal_version }}-linux-amd64.tar.gz"
+    dest: /tmp/kubeseal.tar.gz
+    mode: '0644'
+  when: kubeseal_check.rc != 0
+
+- name: 解壓縮 kubeseal
+  become: true
+  ansible.builtin.unarchive:
+    src: /tmp/kubeseal.tar.gz
+    dest: /tmp
+    remote_src: true
+  when: kubeseal_check.rc != 0
+
+- name: 安裝 kubeseal 到 /usr/local/bin
+  become: true
+  ansible.builtin.copy:
+    src: /tmp/kubeseal
+    dest: /usr/local/bin/kubeseal
+    mode: '0755'
+    remote_src: true
+  when: kubeseal_check.rc != 0
+
+- name: 確認 kubeseal 版本
+  ansible.builtin.command: kubeseal --version
+  register: kubeseal_version_check
+  changed_when: false
+
+- name: 顯示安裝結果
+  ansible.builtin.debug:
+    msg: "kubeseal 安裝完成：{{ kubeseal_version_check.stdout }}"

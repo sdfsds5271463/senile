@@ -13,7 +13,7 @@
 </script>
 
 <template> 
-    {{ t01 }} {{ testTs(uri ?? '') }} ---test s6---
+    {{ t01 }} {{ testTs(uri ?? '') }} ---test s7---
     <div class="card">
         <DataTable :value="[]" paginator :rows="10" tableStyle="min-width: 50rem">
             <Column field="symbol" header="測試UI表格1"></Column>
