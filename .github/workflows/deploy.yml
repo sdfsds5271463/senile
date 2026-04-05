@@ -4,7 +4,8 @@ on:
   push:
     branches: [ "main", "dev" ]   # 兩條線都觸發
     paths-ignore:
-      - 'k8s/**'   # k8s manifest 變動（CI 自動更新的）不再觸發，避免循環
+      - 'k8s/**'     # k8s manifest 變動（CI 自動更新的）不再觸發，避免循環
+      - 'infra/**'   # Ansible / Terraform 變動不需要重新 build image
 
 permissions:
   contents: write        # 回推 git 寫入權限

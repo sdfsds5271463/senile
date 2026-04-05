@@ -12,17 +12,23 @@
   register: controller_check
   ignore_errors: true
   changed_when: false
+  environment:
+    KUBECONFIG: "{{ vm_home }}/.kube/config"
 
 - name: 部署 sealed-secrets-controller v{{ sealed_secrets_version }}
   ansible.builtin.command: >
     kubectl apply -f
     https://github.com/bitnami-labs/sealed-secrets/releases/download/v{{ sealed_secrets_version }}/controller.yaml
   when: controller_check.rc != 0
+  environment:
+    KUBECONFIG: "{{ vm_home }}/.kube/config"
 
 - name: 等待 sealed-secrets-controller 就緒
   ansible.builtin.command: >
     kubectl rollout status deployment/sealed-secrets-controller -n kube-system --timeout=120s
   when: controller_check.rc != 0
+  environment:
+    KUBECONFIG: "{{ vm_home }}/.kube/config"
 
 - name: 偵測系統架構（x86_64 → amd64，aarch64 → arm64）
   ansible.builtin.set_fact:
