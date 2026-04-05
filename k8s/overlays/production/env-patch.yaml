@@ -27,6 +27,8 @@ spec:
 #   DB_PASSWORD: YXBwX3R0MTIzNDU2
 #   # echo -n 'mig_tt123456' | base64
 #   MIGRATION_DB_PASSWORD: bWlnX3R0MTIzNDU2
+#   # echo -n 'exp_tt123456' | base64
+#   MYSQL_EXPORTER_PASSWORD: ZXhwX3R0MTIzNDU2
 ---
 # Ingress patch：production 使用 laravel.local
 apiVersion: networking.k8s.io/v1
