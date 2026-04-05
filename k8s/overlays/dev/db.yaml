@@ -67,6 +67,11 @@ spec:
             secretKeyRef:
               name: laravel-secret
               key: DB_PASSWORD
+        - name: MYSQL_EXPORTER_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: laravel-secret
+              key: MYSQL_EXPORTER_PASSWORD
         resources:
           requests:
             memory: "256Mi"
