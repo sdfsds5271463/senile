@@ -16,6 +16,9 @@ data:
       GRANT INSERT, UPDATE, DELETE, SELECT
         ON \`${MYSQL_DATABASE}\`.* TO 'senile_dbusr'@'%';
 
+      CREATE USER IF NOT EXISTS 'exporter'@'127.0.0.1' IDENTIFIED BY '${MYSQL_EXPORTER_PASSWORD}' WITH MAX_USER_CONNECTIONS 3;
+      GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO 'exporter'@'127.0.0.1';
+
       FLUSH PRIVILEGES;
     EOSQL
 ---
@@ -93,7 +96,7 @@ spec:
         image: prom/mysqld-exporter:v0.15.1
         args:
           - --mysqld.address=127.0.0.1:3306
-          - --mysqld.username=root
+          - --mysqld.username=exporter
         ports:
           - containerPort: 9104
             name: metrics
@@ -102,7 +105,7 @@ spec:
             valueFrom:
               secretKeyRef:
                 name: laravel-secret
-                key: DB_PASSWORD
+                key: MYSQL_EXPORTER_PASSWORD
         resources:
           requests:
             memory: "32Mi"
