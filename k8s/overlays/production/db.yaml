@@ -1,4 +1,4 @@
-# MySQL 初始化腳本：首次建立 DB 時建立 migration_dbuser 與 senile_dbusr
+# MySQL 初始化腳本：首次建立 DB 時建立 migration_dbuser 與 senile_dbusr  exporter
 # 只在 PVC 全新時執行（MySQL initdb 機制）
 apiVersion: v1
 kind: ConfigMap
