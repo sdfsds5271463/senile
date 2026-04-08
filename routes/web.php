@@ -95,33 +95,28 @@ Route::get('/testMail', function () {
 
 
 
+// ===== 統計 QPS / Latency / ErrorRate 的路由群組 =====
+Route::middleware([\App\Http\Middleware\PrometheusMetricsMiddleware::class])->group(function () {
 
+    Route::get('/', function () {
+        return Inertia::render('Welcome', [   // resources/js/Pages/Welcome.vue
+            'canLogin' => Route::has('login'),  // 只要有名為 login 的路由，就回傳 true
+            'canRegister' => Route::has('register'),
+            'laravelVersion' => Application::VERSION,
+            'phpVersion' => PHP_VERSION,
+        ]);
+    });
 
+    Route::get('/dashboard', function () {
+        return Inertia::render('Dashboard');
+    })->middleware(['auth', 'verified'])->name('dashboard');
 
+    Route::middleware('auth')->group(function () {
+        Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+        Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+        Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    });
 
-Route::get('/', function () {
-    return Inertia::render('Welcome', [   // resources/js/Pages/Welcome.vue
-        'canLogin' => Route::has('login'),  // 只要有名為 login 的路由，就回傳 true
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
-});
-
-
-
-
-
-
-
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
-
-Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
 require __DIR__.'/auth.php';  // auth 引入 login / register 等路由
