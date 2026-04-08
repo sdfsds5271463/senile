@@ -25,6 +25,7 @@
     },
     "dependencies": {
         "@primevue/themes": "^4.5.4",
+        "pinia": "^3.0.4",
         "primevue": "^4.5.4"
     }
 }

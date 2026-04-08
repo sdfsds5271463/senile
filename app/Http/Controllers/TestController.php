@@ -7,7 +7,7 @@ use Inertia\Inertia;
 use App\Services\TestService;
 use Illuminate\Support\Facades\App;
 use App\Models\Test;
-use LengthException;
+//use LengthException;
 use Session;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Cache;
@@ -324,7 +324,7 @@ class TestController extends Controller
             ->post($url, [
                 'contents' => [
                     'parts' => [
-                        'text' => "請用200字以內，簡述 k8s {$question}"
+                        'text' => $question
                     ]
                 ]
             ]);

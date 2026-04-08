@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
-import Button from 'primevue/button';
+//import Button from 'primevue/button';
+import { GeminiApiStore } from '@/Stores/GeminiApiStore'
 
 defineProps({
     canLogin: { type: Boolean },
@@ -9,38 +10,7 @@ defineProps({
     phpVersion: { type: String, required: true },
 });
 
-const features = [
-    {
-        icon: '⚡',
-        title: '極速開發',
-        desc: '結合 Laravel + Vue 3 + Vite，享受最流暢的全端開發體驗。熱更新讓你零等待，專注在創作本身。',
-    },
-    {
-        icon: '🎨',
-        title: '精美 UI',
-        desc: '整合 PrimeVue 4 與 Tailwind CSS，數十種現代元件開箱即用，輕鬆打造賞心悅目的介面。',
-    },
-    {
-        icon: '🔒',
-        title: '安全認證',
-        desc: 'Laravel Breeze 提供完整的身份驗證系統，包含登入、註冊、密碼重置與 Email 驗證。',
-    },
-    {
-        icon: '🚀',
-        title: 'Inertia.js',
-        desc: '無需 API，像 SPA 一樣流暢。Inertia.js 讓前後端無縫整合，打造真正的現代 Web 應用。',
-    },
-    {
-        icon: '🛡️',
-        title: 'TypeScript',
-        desc: '全專案 TypeScript 支援，型別安全讓你在開發時提早發現錯誤，大幅提升程式碼品質。',
-    },
-    {
-        icon: '🐳',
-        title: 'Docker 就緒',
-        desc: '內建 Docker Compose 配置，一鍵啟動完整開發環境，告別「在我電腦上可以跑」的困境。',
-    },
-];
+const GeminiApi = GeminiApiStore();
 </script>
 
 <template>
@@ -86,61 +56,48 @@ const features = [
             </div>
 
             <h1 class="hero-title">
-                打造下一代<br />
-                <span class="gradient-text">Web 應用</span>
+                DEMO頁面<br />
+                <span class="gradient-text">LARAVEL VUE K3S</span>
             </h1>
 
             <p class="hero-desc">
                 整合 Laravel、Vue 3、Inertia.js 與 PrimeVue 的現代全端開發起手式。<br />
                 從零到一，讓你的創意快速成真。
             </p>
-
-            <div class="hero-actions">
-                <Link v-if="canRegister" :href="route('register')" class="hero-btn-primary">
-                    免費開始使用
-                    <span class="btn-arrow">→</span>
-                </Link>
-                <Link v-if="canLogin" :href="route('login')" class="hero-btn-secondary">
-                    登入帳戶
-                </Link>
-            </div>
-
-            <!-- 數據展示 -->
-            <div class="hero-stats">
-                <div class="stat-item">
-                    <span class="stat-num">4.x</span>
-                    <span class="stat-label">PrimeVue</span>
-                </div>
-                <div class="stat-divider"></div>
-                <div class="stat-item">
-                    <span class="stat-num">Vue 3</span>
-                    <span class="stat-label">Composition API</span>
-                </div>
-                <div class="stat-divider"></div>
-                <div class="stat-item">
-                    <span class="stat-num">Vite 6</span>
-                    <span class="stat-label">極速構建</span>
-                </div>
-            </div>
         </section>
 
-        <!-- ===== 功能卡片 ===== -->
-        <section class="features">
-            <div class="features-inner">
+        <!-- ===== Gemini 問答區塊 ===== -->
+        <section class="gemini-section">
+            <div class="gemini-inner">
                 <div class="section-header">
-                    <h2 class="section-title">強大的技術堆疊</h2>
-                    <p class="section-desc">每一層都經過精心挑選，為你提供最佳的開發體驗</p>
+                    <h2 class="section-title">✨ AI 問答</h2>
+                    <p class="section-desc">讓 Gemini 為你解答技術問題</p>
                 </div>
 
-                <div class="feature-grid">
-                    <div
-                        v-for="feature in features"
-                        :key="feature.title"
-                        class="feature-card"
+                <div class="gemini-card">
+                    <button
+                        class="gemini-btn"
+                        :disabled="GeminiApi.loading"
+                        @click="GeminiApi.act_geminiapi()"
                     >
-                        <div class="feature-icon">{{ feature.icon }}</div>
-                        <h3 class="feature-title">{{ feature.title }}</h3>
-                        <p class="feature-desc">{{ feature.desc }}</p>
+                        <span v-if="GeminiApi.loading" class="gemini-spinner"></span>
+                        <span v-else>🤖</span>
+                        {{ GeminiApi.loading ? 'gemini詢問中...(約3~15秒)' : '問問 Gemini' }}
+                    </button>
+
+                    <div v-if="GeminiApi.error" class="gemini-error">
+                        ⚠️ {{ GeminiApi.error }}
+                    </div>
+
+                    <div v-if="GeminiApi.question" class="gemini-result">
+                        <div class="gemini-question">
+                            <span class="result-label">問題</span>
+                            <p>{{ GeminiApi.question }}</p>
+                        </div>
+                        <div class="gemini-answer">
+                            <span class="result-label">回答</span>
+                            <p>{{ GeminiApi.answer }}</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -365,110 +322,7 @@ const features = [
     margin-right: auto;
 }
 
-.hero-actions {
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-    flex-wrap: wrap;
-    margin-bottom: 4rem;
-}
-
-.hero-btn-primary {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.875rem 2rem;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    color: #ffffff;
-    text-decoration: none;
-    font-size: 1rem;
-    font-weight: 600;
-    border-radius: 0.875rem;
-    transition: opacity 0.2s, transform 0.1s;
-    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
-}
-.hero-btn-primary:hover {
-    opacity: 0.9;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(99, 102, 241, 0.5);
-}
-
-.btn-arrow {
-    transition: transform 0.2s;
-}
-.hero-btn-primary:hover .btn-arrow {
-    transform: translateX(4px);
-}
-
-.hero-btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.875rem 2rem;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: rgba(255, 255, 255, 0.8);
-    text-decoration: none;
-    font-size: 1rem;
-    font-weight: 500;
-    border-radius: 0.875rem;
-    background: rgba(255, 255, 255, 0.03);
-    transition: all 0.2s;
-}
-.hero-btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.3);
-    color: #ffffff;
-    transform: translateY(-2px);
-}
-
-/* 統計數字 */
-.hero-stats {
-    display: inline-flex;
-    align-items: center;
-    gap: 2rem;
-    padding: 1rem 2rem;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 1rem;
-}
-
-.stat-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.2rem;
-}
-
-.stat-num {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #a5b4fc;
-}
-
-.stat-label {
-    font-size: 0.7rem;
-    color: rgba(255, 255, 255, 0.35);
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-}
-
-.stat-divider {
-    width: 1px;
-    height: 2rem;
-    background: rgba(255, 255, 255, 0.1);
-}
-
 /* ===== 功能卡片 ===== */
-.features {
-    position: relative;
-    z-index: 1;
-    padding: 4rem 2rem 6rem;
-}
-
-.features-inner {
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
 .section-header {
     text-align: center;
     margin-bottom: 3rem;
@@ -488,44 +342,122 @@ const features = [
     margin: 0;
 }
 
-.feature-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 1.25rem;
+/* ===== Gemini 問答 ===== */
+.gemini-section {
+    position: relative;
+    z-index: 1;
+    padding: 2rem 2rem 4rem;
 }
 
-.feature-card {
-    padding: 1.75rem;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    border-radius: 1.25rem;
-    transition: all 0.3s;
-    cursor: default;
-}
-.feature-card:hover {
-    background: rgba(99, 102, 241, 0.07);
-    border-color: rgba(99, 102, 241, 0.25);
-    transform: translateY(-4px);
-    box-shadow: 0 12px 40px rgba(99, 102, 241, 0.12);
+.gemini-inner {
+    max-width: 800px;
+    margin: 0 auto;
 }
 
-.feature-icon {
-    font-size: 2rem;
-    margin-bottom: 1rem;
+.gemini-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
 }
 
-.feature-title {
-    font-size: 1.1rem;
-    font-weight: 600;
+.gemini-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.875rem 2.25rem;
+    background: linear-gradient(135deg, #10b981, #059669);
     color: #ffffff;
-    margin: 0 0 0.6rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 0.875rem;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.35);
+}
+.gemini-btn:hover:not(:disabled) {
+    opacity: 0.9;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(16, 185, 129, 0.45);
+}
+.gemini-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
-.feature-desc {
-    font-size: 0.875rem;
-    color: rgba(255, 255, 255, 0.45);
-    line-height: 1.7;
+.gemini-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.gemini-error {
+    width: 100%;
+    padding: 1rem 1.25rem;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 0.875rem;
+    color: #fca5a5;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.gemini-result {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.gemini-question,
+.gemini-answer {
+    padding: 1.25rem 1.5rem;
+    border-radius: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.gemini-question {
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.gemini-answer {
+    background: rgba(16, 185, 129, 0.07);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.result-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.gemini-question p {
     margin: 0;
+    color: #a5b4fc;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.gemini-answer p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.95rem;
+    line-height: 1.8;
+    white-space: pre-line;
 }
 
 /* ===== CTA ===== */
@@ -616,10 +548,6 @@ const features = [
 @media (max-width: 640px) {
     .hero {
         padding: 8rem 1.25rem 4rem;
-    }
-    .hero-stats {
-        gap: 1.25rem;
-        padding: 0.75rem 1.25rem;
     }
     .feature-grid {
         grid-template-columns: 1fr;

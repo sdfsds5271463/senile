@@ -1,14 +1,16 @@
 import '../css/app.css'
 import './bootstrap'
 
-import { createInertiaApp, type AppProps } from '@inertiajs/vue3'
-import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
-import { createApp, h, type DefineComponent } from 'vue'
-import { ZiggyVue } from '../../vendor/tightenco/ziggy'
+import { createInertiaApp, type AppProps } from '@inertiajs/vue3';
+import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
+import { createApp, h, type DefineComponent } from 'vue';
+import { ZiggyVue } from '../../vendor/tightenco/ziggy';
+import { createPinia } from 'pinia';
 import PrimeVue from 'primevue/config';
 import Aura from '@primevue/themes/aura'; // 推薦使用 Aura 主題，比較現代
 
 const appName: string = import.meta.env.VITE_APP_NAME || 'Laravel'
+const pinia = createPinia();
 
 createInertiaApp({
     title: (title: string) => `${title} - ${appName}`,
@@ -30,6 +32,7 @@ createInertiaApp({
                     preset: Aura // 設定主題預設值
                 }
             })
+            .use(pinia)
             .mount(el as Element)
     },
 
