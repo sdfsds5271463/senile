@@ -19,5 +19,7 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-
+// 測試發送 gemini API
+// http://127.0.0.1:8080/api/geminiapi
+Route::get('/geminiapi', [TestController::class, 'geminiapi']);
 

@@ -7,10 +7,14 @@ use Inertia\Inertia;
 use App\Services\TestService;
 use Illuminate\Support\Facades\App;
 use App\Models\Test;
+use LengthException;
 use Session;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Http\Client\RequestException;
+use Illuminate\Http\Client\ConnectionException;
 
 class TestController extends Controller
 {
@@ -283,7 +287,80 @@ class TestController extends Controller
         $Cache->has('key');
     }
 
+    //測試發送 gemini api
+    function geminiapi(Request $request){
+        // 準備回應
+        $ret = array(
+            'status' => 'fail',
+            'msg' => 'unknow error',
+            'data' => [
+                'question' => "",
+                'answer' => "",
+            ],
+        );
 
+        //準備參數
+        $token = @env('GEMINI_TOKEN');
+        if( $token == ""){
+            $ret['msg'] = "token is null";
+            return response()->json($ret, 404);
+        }
+        $model = "gemini-3.1-flash-lite-preview";
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent";
+
+        //動態內容
+        $question_arr = array("是什麼?", "哪比VM優勢?", "如何實現CI/CD?", "怎麼實現多node?"
+            , "如何建構infra?", "如何LB平衡負載?", "的HPA有何用?", "好在哪裡?", "為何複雜度高?");
+        $question = $question_arr[mt_rand()%count($question_arr)];
+        $question = "請用200字以內，簡述 k8s {$question}";
+
+        //發送請求
+        try {
+            $response = Http::withHeaders([
+                'x-goog-api-key' => $token,
+                'Accept' => 'application/json',
+            ])
+            ->timeout(15)
+            ->post($url, [
+                'contents' => [
+                    'parts' => [
+                        'text' => "請用200字以內，簡述 k8s {$question}"
+                    ]
+                ]
+            ]);
+        } catch (ConnectionException $e) {  //超時
+            $ret['msg'] = $e->getMessage();
+            return response()->json($ret, 500);
+        } catch (RequestException $e) {  // 其他異常
+            $ret['msg'] = $e->getMessage();
+            return response()->json($ret, 500);
+        }
+
+        // 不正常狀態
+        if (!$response->successful()) {
+            $status = $response->status();
+            $ret['msg'] = "http status fail: {$status}";
+            return response()->json($ret, 500);
+        }
+
+        // 取得回應
+        $data = $response->json();
+        $answer = @$data['candidates'][0]['content']['parts'][0]['text'];
+
+        // 不正常回應
+        if ($answer == "") {
+            $ret['msg'] = "gemini answer null";
+            return response()->json($ret, 500);
+        }
+        
+        // 渲染結果
+        $ret['status'] = 'success';
+        $ret['msg'] = '';
+        $ret['data']['question'] = $question;
+        $ret['data']['answer'] = $answer;
+
+        return response()->json($ret, 200);
+    }
 
 
 }
