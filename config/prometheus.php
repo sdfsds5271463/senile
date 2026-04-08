@@ -57,5 +57,5 @@ return [
      *  'cache' => null       // InMemory implementation without laravel cache
      *  'cache' => 'array'    // InMemory implementation using laravel cache
      */
-    'cache' => null,
+    'cache' => 'redis',   // 跨 request 持久化，Counter/Histogram 才能正確累計
 ];

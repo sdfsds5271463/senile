@@ -17,7 +17,8 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
         $middleware->alias([
-            'test'       => \App\Http\Middleware\TestMiddleware::class,
+            'test'               => \App\Http\Middleware\TestMiddleware::class,
+            'prometheus.metrics' => \App\Http\Middleware\PrometheusMetricsMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

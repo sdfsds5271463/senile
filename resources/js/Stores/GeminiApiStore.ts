@@ -15,24 +15,24 @@ export const GeminiApiStore = defineStore('GeminiApiStore', {
       this.question = '';
       this.answer = '';
 
-      console.log("BEFORE GET");
+      try {
+        const response = await fetch('/api/geminiapi', {
+          method: 'GET',
+        });
+        const data = await response.json();
 
-      const response = await fetch('/api/geminiapi', {
-        method: 'GET',
-      });
-
-      const data = await response.json();
-
-      console.log("AFTER GET", data);
-
-      if (data.status === 'success') {
-        this.question = data.data.question;
-        this.answer = data.data.answer;
-      } else {
-        this.error = data.msg || '發生未知錯誤';
+        if (data.status === 'success') {
+          this.question = data.data.question;
+          this.answer = data.data.answer;
+        } else {
+          this.error = data.msg || '發生未知錯誤';
+        }
+      } catch (e) {
+        this.error = '網路錯誤，請稍後再試';
+        console.error("GeminiApi error", e);
+      } finally {
+        this.loading = false;
       }
-
-      this.loading = false;
     },
   },
 });

@@ -13,7 +13,14 @@ class PrometheusServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // 保持空白，讓 Spatie 套件原生的 Binding 運作即可
+        // 覆蓋 Spatie 的 CollectorRegistry binding，使用修正後的 Adapter
+        // 修正 LaravelCacheAdapter::collect() 沒有 assign fetch() 回傳值的 bug
+        $this->app->scoped(\Prometheus\CollectorRegistry::class, function () {
+            $adapter = new \App\Extensions\FixedPrometheusAdapter(
+                \Illuminate\Support\Facades\Cache::resolve('redis')
+            );
+            return new \Prometheus\CollectorRegistry($adapter, false);
+        });
     }
 
     /**
@@ -41,5 +48,8 @@ class PrometheusServiceProvider extends ServiceProvider
         // 監控 Redis 鍵值數量（如果你的 Cache 很滿，這會飆高）
         Prometheus::addGauge('laravel_redis_keys_total')
             ->value(fn() => Redis::dbsize());
+
+        // HTTP 請求指標由 PrometheusMetricsMiddleware 直接寫入底層 CollectorRegistry（Redis）
+        // 不需要在這裡宣告，getMetricFamilySamples() 會自動讀取 Redis 所有指標
     }
 }

@@ -71,7 +71,7 @@ const GeminiApi = GeminiApiStore();
             <div class="gemini-inner">
                 <div class="section-header">
                     <h2 class="section-title">✨ AI 問答</h2>
-                    <p class="section-desc">讓 Gemini 為你解答技術問題</p>
+                    <p class="section-desc">讓 Gemini 為你解答 K8S 問題</p>
                 </div>
 
                 <div class="gemini-card">
@@ -82,7 +82,7 @@ const GeminiApi = GeminiApiStore();
                     >
                         <span v-if="GeminiApi.loading" class="gemini-spinner"></span>
                         <span v-else>🤖</span>
-                        {{ GeminiApi.loading ? 'gemini詢問中...(約3~15秒)' : '問問 Gemini' }}
+                        {{ GeminiApi.loading ? 'Gemini 詢問中...(約3~15秒)' : '問問 Gemini' }}
                     </button>
 
                     <div v-if="GeminiApi.error" class="gemini-error">
@@ -548,9 +548,6 @@ const GeminiApi = GeminiApiStore();
 @media (max-width: 640px) {
     .hero {
         padding: 8rem 1.25rem 4rem;
-    }
-    .feature-grid {
-        grid-template-columns: 1fr;
     }
     .cta-card {
         padding: 2.5rem 1.5rem;
