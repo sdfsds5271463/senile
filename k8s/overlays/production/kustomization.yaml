@@ -14,7 +14,7 @@ resources:
 #   sed -i "/manualsmash\/senile-app/{n;s|newTag:.*|newTag: ${TAG}|}" "${OVERLAY}/kustomization.yaml"
 images:
   - name: manualsmash/senile-app
-    newTag: main-52212b09ef653b5b6af2c305baa1ffc883bd91bc
+    newTag: main-2ed3b94de54d8d755fa170e147413dc0e3044426
 
 patches:
 - path: env-patch.yaml
