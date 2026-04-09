@@ -14,6 +14,9 @@ use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\ConnectionException;
+use App\Services\TracingService;
+use OpenTelemetry\API\Trace\SpanKind;
+use OpenTelemetry\API\Trace\StatusCode;
 
 class TestController extends Controller
 {
@@ -313,7 +316,25 @@ class TestController extends Controller
         $question = $question_arr[mt_rand()%count($question_arr)];
         $question = "請用200字以內，簡述 k8s {$question}";
 
-        //發送請求
+        //發送請求（子 Span：追蹤 Gemini API 呼叫耗時）
+        $tracing    = app(TracingService::class);
+        $geminiSpan = null;
+        $geminiScope = null;
+
+        if ($tracing->isEnabled()) {
+            $geminiSpan = $tracing->getTracer()
+                ->spanBuilder('gemini.generateContent')
+                ->setSpanKind(SpanKind::KIND_CLIENT)
+                ->startSpan();
+            $geminiScope = $geminiSpan->activate();
+            $geminiSpan->setAttributes([
+                'http.url'    => $url,
+                'http.method' => 'POST',
+                'llm.model'   => $model,
+                'llm.question_length' => strlen($question),
+            ]);
+        }
+
         try {
             $response = Http::withHeaders([
                 'x-goog-api-key' => $token,
@@ -328,11 +349,22 @@ class TestController extends Controller
                 ]
             ]);
         } catch (ConnectionException $e) {  //超時
+            $geminiSpan?->recordException($e);
+            $geminiSpan?->setStatus(StatusCode::STATUS_ERROR, 'timeout');
             $ret['msg'] = $e->getMessage();
             return response()->json($ret, 500);
         } catch (RequestException $e) {  // 其他異常
+            $geminiSpan?->recordException($e);
+            $geminiSpan?->setStatus(StatusCode::STATUS_ERROR, $e->getMessage());
             $ret['msg'] = $e->getMessage();
             return response()->json($ret, 500);
+        } finally {
+            // 不論成功、timeout、exception，都結束子 Span
+            if (isset($response)) {
+                $geminiSpan?->setAttribute('http.status_code', $response->status());
+            }
+            $geminiSpan?->end();
+            $geminiScope?->detach();
         }
 
         // 不正常狀態

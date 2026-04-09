@@ -16,6 +16,11 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
+
+        // Tracing：web + api 都要追蹤，prepend 確保第一個執行（能計到完整耗時）
+        $middleware->web(prepend: [\App\Http\Middleware\TracingMiddleware::class]);
+        $middleware->api(prepend: [\App\Http\Middleware\TracingMiddleware::class]);
+
         $middleware->alias([
             'test'               => \App\Http\Middleware\TestMiddleware::class,
             'prometheus.metrics' => \App\Http\Middleware\PrometheusMetricsMiddleware::class,

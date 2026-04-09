@@ -52,6 +52,24 @@ resource "helm_release" "kube_prometheus_stack" {
           jsonData:
             maxLines: 1000
 
+        - name: Tempo
+          type: tempo
+          url: http://tempo.monitoring.svc.cluster.local:3100
+          access: proxy
+          isDefault: false
+          jsonData:
+            httpMethod: GET
+            # Trace → Log 跳轉（點 trace 可直接跳 Loki 查對應時段 log）
+            tracesToLogsV2:
+              datasourceUid: loki
+              spanStartTimeShift: "-1m"
+              spanEndTimeShift: "1m"
+              filterByTraceID: false
+              filterBySpanID: false
+            # Node Graph 可視化
+            nodeGraph:
+              enabled: true
+
     # ── Alertmanager（關閉，省 RAM）──────────────────────────────────────────
     alertmanager:
       enabled: false    # 目前使用 Grafana 通知，不需要開啟這
@@ -66,5 +84,8 @@ resource "helm_release" "kube_prometheus_stack" {
   YAML
   ]
 
-  depends_on = [kubernetes_namespace.monitoring]
+  depends_on = [
+    kubernetes_namespace.monitoring,
+    helm_release.tempo,   # Tempo 必須先存在，Grafana 才能 probe datasource
+  ]
 }
