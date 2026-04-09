@@ -4,6 +4,7 @@ import { renderToString } from '@vue/server-renderer';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createSSRApp, h } from 'vue';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
+import { createPinia } from 'pinia';
 import PrimeVue from 'primevue/config';
 import Aura from '@primevue/themes/aura'; // 推薦使用 Aura 主題，比較現代
 
@@ -22,6 +23,7 @@ createServer((page) =>
         setup({ App, props, plugin }) {
             return createSSRApp({ render: () => h(App, props) })
                 .use(plugin)
+                .use(createPinia())   // SSR 每個 request 需要獨立的 Pinia instance
                 .use(PrimeVue, {
                     theme: {
                         preset: Aura // 設定主題預設值
