@@ -16,13 +16,27 @@ resource "helm_release" "tempo" {
   timeout    = 180
 
   values = [<<-YAML
-    tempo:
-      reportingEnabled: false
-
-      # ── Trace 保留（chart 認識的 key 是 retention，不是 compactor.compaction.block_retention）
-      retention: 2h
-
-      # ── Trace 儲存 ──────────────────────────────────────────────────────────
+    # ── 完整 config 覆蓋（唯一能加入 metrics_generator.traces_storage 的方式）─
+    # chart 的 metricsGenerator template 不支援 traces_storage，
+    # local-blocks processor 必須有此欄位才能運作
+    config: |
+      multitenancy_enabled: false
+      usage_report:
+        reporting_enabled: false
+      compactor:
+        compaction:
+          block_retention: 2h
+      distributor:
+        receivers:
+          otlp:
+            protocols:
+              grpc:
+                endpoint: 0.0.0.0:4317
+              http:
+                endpoint: 0.0.0.0:4318
+      ingester: {}
+      server:
+        http_listen_port: 3100
       storage:
         trace:
           backend: local
@@ -30,33 +44,28 @@ resource "helm_release" "tempo" {
             path: /var/tempo/traces
           wal:
             path: /var/tempo/wal
+      querier: {}
+      query_frontend: {}
+      overrides:
+        per_tenant_override_config: /conf/overrides.yaml
+      metrics_generator:
+        traces_storage:
+          path: /var/tempo/wal   # local-blocks 必須指向 ingester WAL 路徑
+        storage:
+          path: /tmp/tempo
+          remote_write:
+            - url: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/write
 
-      # ── OTLP Receiver ──────────────────────────────────────────────────────
-      distributor:
-        receivers:
-          otlp:
-            protocols:
-              http:
-                endpoint: 0.0.0.0:4318
-              grpc:
-                endpoint: 0.0.0.0:4317
-
-      # ── Metrics Generator（必須在 tempo.* 底下，chart template 才會渲染）──
-      # chart 自動加入 service-graphs + span-metrics 到 global overrides
-      metricsGenerator:
-        enabled: true
-        remoteWriteUrl: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/write"
-
-      # ── Per-tenant overrides（寫入 /conf/overrides.yaml）──────────────────
+    # ── Per-tenant overrides（寫入 /conf/overrides.yaml）──────────────────
+    tempo:
       overrides:
         "*":
           metrics_generator_processors:
             - service-graphs
             - span-metrics
-            - local-blocks    # Drilldown Breakdown/Comparison 必須有此 processor
-          # 新版預設 rate limit 為 0，必須明確設定否則所有 trace 都被擋掉
-          ingestion_rate_limit_bytes: 15000000   # 15 MB/s
-          ingestion_burst_size_bytes: 20000000   # 20 MB burst
+            - local-blocks
+          ingestion_rate_limit_bytes: 15000000
+          ingestion_burst_size_bytes: 20000000
 
     # ── 資源 ─────────────────────────────────────────────────────────────────
     resources:
