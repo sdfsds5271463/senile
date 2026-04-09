@@ -42,11 +42,20 @@ resource "helm_release" "tempo" {
                 endpoint: 0.0.0.0:4317
 
       # ── Metrics Generator（必須在 tempo.* 底下，chart template 才會渲染）──
-      # 啟用後 chart 自動加入 service-graphs + span-metrics processor
-      # 以及 metrics_generator.storage.remote_write 設定
+      # chart 自動加入 service-graphs + span-metrics 到 global overrides
       metricsGenerator:
         enabled: true
         remoteWriteUrl: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/write"
+
+      # ── Per-tenant overrides（寫入 /conf/overrides.yaml）──────────────────
+      # "*" 匹配所有 tenant，per-tenant 設定會覆蓋 global metrics_generator_processors
+      # 這是唯一能在此 chart 版本加入 local-blocks 的方式
+      overrides:
+        "*":
+          metrics_generator_processors:
+            - service-graphs
+            - span-metrics
+            - local-blocks    # 必須有此 processor，Drilldown Breakdown/Comparison 才能運作
 
     # ── 資源 ─────────────────────────────────────────────────────────────────
     resources:
