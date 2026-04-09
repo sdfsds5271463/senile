@@ -44,7 +44,7 @@ resource "helm_release" "tempo" {
       metrics_generator:
         ring:
           kvstore:
-            store: memberlist    # single binary 用 memberlist 組成 1 節點的 ring
+            store: inmemory    # single binary 單節點不需要 memberlist，inmemory 直接運作
         processor:
           span_metrics:
             enable_target_info: true
