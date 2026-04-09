@@ -295,7 +295,7 @@ class TestController extends Controller
 
         //自訂超時(測試 500 錯誤用)
         $custom_timeout = (int)$request->input('timeout');
-        if($custom_timeout <= 0 || $custom_timeout == ""){
+        if($custom_timeout <= 0){
             $custom_timeout = 15;
         }
 

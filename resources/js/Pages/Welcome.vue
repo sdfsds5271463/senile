@@ -76,7 +76,7 @@ const GeminiApi = GeminiApiStore();
                     </p>
                     <p class="section-desc">
                         Request Timeout = 
-                        <input class="section-ipt" type="number" v-model="GeminiApi.custom_timeout">
+                        <input class="section-ipt" type="number" v-model="GeminiApi.custom_timeout" >
                         s
                     </p>
                 </div>

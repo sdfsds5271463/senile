@@ -19,7 +19,10 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-// 測試發送 gemini API
-// http://127.0.0.1:8080/api/geminiapi
-Route::get('/geminiapi', [TestController::class, 'geminiapi']);
 
+// ===== 統計 QPS / Latency / ErrorRate 的路由群組 =====
+Route::middleware([\App\Http\Middleware\PrometheusMetricsMiddleware::class])->group(function () {
+    // 測試發送 gemini API
+    // http://127.0.0.1:8080/api/geminiapi
+    Route::get('/geminiapi', [TestController::class, 'geminiapi']);
+});
