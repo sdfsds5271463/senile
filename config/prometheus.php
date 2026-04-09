@@ -24,7 +24,7 @@ return [
      * This is the default namespace that will be
      * used by all metrics
      */
-    'default_namespace' => 'app',
+    'default_namespace' => 'laravel',
 
     /*
      * The middleware that will be applied to the urls above

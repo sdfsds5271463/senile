@@ -48,7 +48,6 @@ class PrometheusMetricsMiddleware
 
         /*
         Grafana PromQL：
-
             # QPS
             rate(laravel_http_requests_total[1m])
 
