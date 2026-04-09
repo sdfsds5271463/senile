@@ -103,6 +103,7 @@ resource "helm_release" "promtail" {
       # Pipeline：從 Laravel JSON log 萃取 level label
       snippets:
         pipelineStages:
+          - cri: {}                       # 剝掉 containerd 外層格式（timestamp stderr F ...）
           - json:
               expressions:
                 level_name: level_name    # Monolog JsonFormatter 的欄位名稱

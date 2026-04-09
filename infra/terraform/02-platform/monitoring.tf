@@ -44,20 +44,12 @@ resource "helm_release" "kube_prometheus_stack" {
         size: 2Gi
         storageClassName: local-path   # k3s 預設 storage class
 
-      # 固定 Prometheus datasource 的 uid（kube-prometheus-stack 預設 datasource）
-      # 必須固定才能讓 Tempo tracesToMetrics 和 serviceMap 正確跳轉
-      grafana.ini:
-        {}
-      datasources:
-        datasources.yaml:
-          apiVersion: 1
-          datasources:
-            - name: Prometheus
-              type: prometheus
-              uid: prometheus
-              url: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
-              access: proxy
-              isDefault: true
+      # kube-prometheus-stack 內建 Prometheus datasource，透過 sidecar 注入
+      # 用 grafana.sidecar 的 label 固定 uid，不用手動 datasources.yaml（避免覆蓋 additionalDataSources）
+      sidecar:
+        datasources:
+          defaultDatasourceEnabled: true
+          uid: prometheus           # 固定 Prometheus datasource uid
 
       additionalDataSources:
         - name: Loki
@@ -85,7 +77,7 @@ resource "helm_release" "kube_prometheus_stack" {
               filterByTraceID: false
               filterBySpanID: false
               customQuery: true
-              query: '{app="laravel-app"} | json | traceID="$${__trace.traceId}"'
+              query: '{app="laravel-nginx"} | json | traceID="$${__trace.traceId}"'
             # Trace → Metrics 跳轉（點 span 可跳到對應 Prometheus 指標）
             tracesToMetrics:
               datasourceUid: prometheus
