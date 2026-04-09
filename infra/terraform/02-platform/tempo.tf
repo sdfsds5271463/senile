@@ -19,6 +19,9 @@ resource "helm_release" "tempo" {
     tempo:
       reportingEnabled: false
 
+      # ── Trace 保留（chart 認識的 key 是 retention，不是 compactor.compaction.block_retention）
+      retention: 2h
+
       # ── Trace 儲存 ──────────────────────────────────────────────────────────
       storage:
         trace:
@@ -38,25 +41,12 @@ resource "helm_release" "tempo" {
               grpc:
                 endpoint: 0.0.0.0:4317
 
-      # ── 保留設定 ────────────────────────────────────────────────────────────
-      compactor:
-        compaction:
-          block_retention: 2h
-
-    # ── Metrics Generator（helm chart level key，不是 tempo.* 底下）──────────
-    # metricsGenerator.enabled 才是 chart 真正認識的開關
-    metricsGenerator:
-      enabled: true
-      remoteWriteUrl: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/write"
-
-    # ── Overrides：啟用 processor（含 local-blocks 才能跑 TraceQL rate()）───
-    overrides:
-      defaults:
-        metrics_generator:
-          processors:
-            - service-graphs
-            - span-metrics
-            - local-blocks      # 讓 TraceQL rate()/histogram_over_time() 能運作
+      # ── Metrics Generator（必須在 tempo.* 底下，chart template 才會渲染）──
+      # 啟用後 chart 自動加入 service-graphs + span-metrics processor
+      # 以及 metrics_generator.storage.remote_write 設定
+      metricsGenerator:
+        enabled: true
+        remoteWriteUrl: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/write"
 
     # ── 資源 ─────────────────────────────────────────────────────────────────
     resources:
