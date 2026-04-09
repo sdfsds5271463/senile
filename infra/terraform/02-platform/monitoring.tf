@@ -44,13 +44,28 @@ resource "helm_release" "kube_prometheus_stack" {
         size: 2Gi
         storageClassName: local-path   # k3s 預設 storage class
 
-      # 預先掛載 Loki datasource，啟動後直接可用
+      # 固定 Prometheus datasource 的 uid（kube-prometheus-stack 預設 datasource）
+      # 必須固定才能讓 Tempo tracesToMetrics 和 serviceMap 正確跳轉
+      grafana.ini:
+        {}
+      datasources:
+        datasources.yaml:
+          apiVersion: 1
+          datasources:
+            - name: Prometheus
+              type: prometheus
+              uid: prometheus
+              url: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+              access: proxy
+              isDefault: true
+
       additionalDataSources:
         - name: Loki
           type: loki
           url: http://loki.monitoring.svc.cluster.local:3100
           access: proxy
           isDefault: false
+          uid: loki
           jsonData:
             maxLines: 1000
 
@@ -59,16 +74,29 @@ resource "helm_release" "kube_prometheus_stack" {
           url: http://tempo.monitoring.svc.cluster.local:3100
           access: proxy
           isDefault: false
-          uid: loki
+          uid: tempo
           jsonData:
             httpMethod: GET
-            # Trace → Log 跳轉（點 trace 可直接跳 Loki 查對應時段 log）
+            # Trace → Log 跳轉
             tracesToLogsV2:
               datasourceUid: loki
               spanStartTimeShift: "-1m"
               spanEndTimeShift: "1m"
               filterByTraceID: false
               filterBySpanID: false
+            # Trace → Metrics 跳轉（點 span 可跳到對應 Prometheus 指標）
+            tracesToMetrics:
+              datasourceUid: prometheus
+              spanStartTimeShift: "-1m"
+              spanEndTimeShift: "1m"
+              queries:
+                - name: Request rate
+                  query: rate(traces_spanmetrics_calls_total{$$__tags}[5m])
+                - name: P95 Latency
+                  query: histogram_quantile(0.95, rate(traces_spanmetrics_duration_milliseconds_bucket{$$__tags}[5m]))
+            # Service Map（使用 Tempo span metrics 送到 Prometheus 的資料）
+            serviceMap:
+              datasourceUid: prometheus
             # Node Graph 可視化
             nodeGraph:
               enabled: true
