@@ -38,30 +38,25 @@ resource "helm_release" "tempo" {
               grpc:
                 endpoint: 0.0.0.0:4317
 
-      # ── Span Metrics Generator ──────────────────────────────────────────────
-      # 啟用後 Grafana 的 TraceQL rate()/histogram() 才能運作
-      # 產生的指標 remote_write 至 Prometheus
-      metrics_generator:
-        processor:
-          span_metrics:
-            enable_target_info: true
-          service_graphs:
-            enable_messaging_system_latency_histogram: false
-        storage:
-          path: /var/tempo/generator/wal
-          remote_write:
-            - url: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/write
-              send_exemplars: true
-
-      overrides:
-        defaults:
-          metrics_generator:
-            processors: [service-graphs, span-metrics]   # 啟用兩個 processor
-
       # ── 保留設定 ────────────────────────────────────────────────────────────
       compactor:
         compaction:
-          block_retention: 2h      # trace 保留 2 小時（dev 環境節省磁碟）
+          block_retention: 2h
+
+    # ── Metrics Generator（helm chart level key，不是 tempo.* 底下）──────────
+    # metricsGenerator.enabled 才是 chart 真正認識的開關
+    metricsGenerator:
+      enabled: true
+      remoteWriteUrl: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/write"
+
+    # ── Overrides：啟用 processor（含 local-blocks 才能跑 TraceQL rate()）───
+    overrides:
+      defaults:
+        metrics_generator:
+          processors:
+            - service-graphs
+            - span-metrics
+            - local-blocks      # 讓 TraceQL rate()/histogram_over_time() 能運作
 
     # ── 資源 ─────────────────────────────────────────────────────────────────
     resources:
