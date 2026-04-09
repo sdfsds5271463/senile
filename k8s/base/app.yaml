@@ -118,13 +118,13 @@ spec:
             cpu: "100m"
         livenessProbe:
           httpGet:
-            path: /
+            path: /up
             port: 80
           initialDelaySeconds: 10
           periodSeconds: 10
         readinessProbe:
           httpGet:
-            path: /
+            path: /up
             port: 80
           initialDelaySeconds: 5
           periodSeconds: 5
