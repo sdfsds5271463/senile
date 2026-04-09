@@ -10,7 +10,7 @@ resource "helm_release" "tempo" {
   name       = "tempo"
   repository = "https://grafana.github.io/helm-charts"
   chart      = "tempo"
-  version    = "1.10.3"
+  version    = "1.14.0"   # Tempo 2.7.x，支援 compare() TraceQL 函式
   namespace  = kubernetes_namespace.monitoring.metadata[0].name
   wait       = true
   timeout    = 180
