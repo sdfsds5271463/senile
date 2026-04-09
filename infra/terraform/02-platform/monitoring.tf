@@ -85,7 +85,7 @@ resource "helm_release" "kube_prometheus_stack" {
               filterByTraceID: true       # log 帶了 traceID 欄位，可直接過濾
               filterBySpanID: false
               customQuery: true
-              query: '{namespace="${__tags.namespace}"} | json | traceID="${__trace.traceId}"'
+              query: '{namespace="$${__tags.namespace}"} | json | traceID="$${__trace.traceId}"'
             # Trace → Metrics 跳轉（點 span 可跳到對應 Prometheus 指標）
             tracesToMetrics:
               datasourceUid: prometheus
