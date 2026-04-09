@@ -82,10 +82,10 @@ resource "helm_release" "kube_prometheus_stack" {
               datasourceUid: loki
               spanStartTimeShift: "-1m"
               spanEndTimeShift: "1m"
-              filterByTraceID: true       # log 帶了 traceID 欄位，可直接過濾
+              filterByTraceID: false
               filterBySpanID: false
               customQuery: true
-              query: '{namespace="$${__tags.namespace}"} | json | traceID="$${__trace.traceId}"'
+              query: '{app="laravel-app"} | json | traceID="$${__trace.traceId}"'
             # Trace → Metrics 跳轉（點 span 可跳到對應 Prometheus 指標）
             tracesToMetrics:
               datasourceUid: prometheus

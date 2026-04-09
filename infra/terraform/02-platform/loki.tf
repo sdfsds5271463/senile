@@ -100,6 +100,15 @@ resource "helm_release" "promtail" {
       clients:
         - url: http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push
 
+      # Pipeline：從 Laravel JSON log 萃取 level label
+      snippets:
+        pipelineStages:
+          - json:
+              expressions:
+                level_name: level_name    # Monolog JsonFormatter 的欄位名稱
+          - labels:
+              level: level_name           # 轉成 Loki label，Grafana 才能顯示顏色層級
+
     resources:
       requests:
         memory: "64Mi"
