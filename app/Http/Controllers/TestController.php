@@ -291,6 +291,14 @@ class TestController extends Controller
 
     //測試發送 gemini api
     function geminiapi(Request $request){
+        //http://127.0.0.1:8080/api/geminiapi?timeout=60
+
+        //自訂超時(測試 500 錯誤用)
+        $custom_timeout = (int)$request->input('timeout');
+        if($custom_timeout <= 0 || $custom_timeout == ""){
+            $custom_timeout = 15;
+        }
+
         // 準備回應
         $ret = array(
             'status' => 'fail',
@@ -340,7 +348,7 @@ class TestController extends Controller
                 'x-goog-api-key' => $token,
                 'Accept' => 'application/json',
             ])
-            ->timeout(15)
+            ->timeout($custom_timeout)  // 自訂超時(測試 500 錯誤用)
             ->post($url, [
                 'contents' => [
                     'parts' => [

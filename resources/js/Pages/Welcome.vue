@@ -71,7 +71,14 @@ const GeminiApi = GeminiApiStore();
             <div class="gemini-inner">
                 <div class="section-header">
                     <h2 class="section-title">✨ AI 問答</h2>
-                    <p class="section-desc">讓 Gemini 為你解答 K8S 問題</p>
+                    <p class="section-desc">
+                        讓 Gemini 為你解答 K8S 問題
+                    </p>
+                    <p class="section-desc">
+                        Request Timeout = 
+                        <input class="section-ipt" type="number" v-model="GeminiApi.custom_timeout">
+                        s
+                    </p>
                 </div>
 
                 <div class="gemini-card">
@@ -263,7 +270,7 @@ const GeminiApi = GeminiApiStore();
 .hero {
     position: relative;
     z-index: 1;
-    padding: 10rem 2rem 6rem;
+    padding: 10rem 2rem 2rem;
     text-align: center;
     max-width: 900px;
     margin: 0 auto;
@@ -325,7 +332,7 @@ const GeminiApi = GeminiApiStore();
 /* ===== 功能卡片 ===== */
 .section-header {
     text-align: center;
-    margin-bottom: 3rem;
+    margin-bottom: 2rem;
 }
 
 .section-title {
@@ -340,6 +347,13 @@ const GeminiApi = GeminiApiStore();
     font-size: 1rem;
     color: rgba(255, 255, 255, 0.4);
     margin: 0;
+}
+
+.section-ipt {
+    border-radius: 10px;
+    background-color:  rgba(10, 10, 26, 0.7);
+    line-height: 10px;
+    width: 80px;
 }
 
 /* ===== Gemini 問答 ===== */
