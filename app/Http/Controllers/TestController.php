@@ -15,8 +15,10 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\ConnectionException;
 use App\Services\TracingService;
+use OpenTelemetry\API\Trace\Span;
 use OpenTelemetry\API\Trace\SpanKind;
 use OpenTelemetry\API\Trace\StatusCode;
+use Illuminate\Support\Facades\Log;
 
 class TestController extends Controller
 {
@@ -360,11 +362,23 @@ class TestController extends Controller
             $geminiSpan?->recordException($e);
             $geminiSpan?->setStatus(StatusCode::STATUS_ERROR, 'timeout');
             $ret['msg'] = $e->getMessage();
+            Log::error('gemini timeout', [
+                'traceID' => Span::getCurrent()->getContext()->getTraceId(),
+                'error'   => $e->getMessage(),
+                'model'   => $model,
+                'url'     => $url,
+            ]);
             return response()->json($ret, 500);
         } catch (RequestException $e) {  // 其他異常
             $geminiSpan?->recordException($e);
             $geminiSpan?->setStatus(StatusCode::STATUS_ERROR, $e->getMessage());
             $ret['msg'] = $e->getMessage();
+            Log::error('gemini request failed', [
+                'traceID' => Span::getCurrent()->getContext()->getTraceId(),
+                'error'   => $e->getMessage(),
+                'model'   => $model,
+                'url'     => $url,
+            ]);
             return response()->json($ret, 500);
         } finally {
             // 不論成功、timeout、exception，都結束子 Span
