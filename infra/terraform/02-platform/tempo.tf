@@ -42,9 +42,6 @@ resource "helm_release" "tempo" {
       # 啟用後 Grafana 的 TraceQL rate()/histogram() 才能運作
       # 產生的指標 remote_write 至 Prometheus
       metrics_generator:
-        ring:
-          kvstore:
-            store: inmemory    # single binary 單節點不需要 memberlist，inmemory 直接運作
         processor:
           span_metrics:
             enable_target_info: true
