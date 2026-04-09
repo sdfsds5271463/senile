@@ -22,19 +22,24 @@ class TracingService
             return; // TEMPO_ENDPOINT 未設定，tracing 停用
         }
 
-        $transport = (new OtlpHttpTransportFactory())->create(
-            rtrim($endpoint, '/') . '/v1/traces',
-            'application/json'  // JSON over HTTP，不需要 protobuf
-        );
+        try {
+            $transport = (new OtlpHttpTransportFactory())->create(
+                rtrim($endpoint, '/') . '/v1/traces',
+                'application/json'  // JSON over HTTP，不需要 protobuf
+            );
 
-        $this->tracerProvider = new TracerProvider(
-            new SimpleSpanProcessor(new SpanExporter($transport)),
-            null,
-            ResourceInfo::create(Attributes::create([
-                'service.name'           => config('app.name', 'laravel'),
-                'deployment.environment' => config('app.env', 'production'),
-            ]))
-        );
+            $this->tracerProvider = new TracerProvider(
+                new SimpleSpanProcessor(new SpanExporter($transport)),
+                null,
+                ResourceInfo::create(Attributes::create([
+                    'service.name'           => config('app.name', 'laravel'),
+                    'deployment.environment' => config('app.env', 'production'),
+                ]))
+            );
+        } catch (\Throwable $e) {
+            report($e); // 记录错误但不中断应用
+            // tracing 保持停用状态
+        }
 
         $this->tracer = $this->tracerProvider->getTracer('laravel');
 

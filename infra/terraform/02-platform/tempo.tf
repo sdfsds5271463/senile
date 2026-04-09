@@ -38,6 +38,29 @@ resource "helm_release" "tempo" {
               grpc:
                 endpoint: 0.0.0.0:4317
 
+      # ── Span Metrics Generator ──────────────────────────────────────────────
+      # 啟用後 Grafana 的 TraceQL rate()/histogram() 才能運作
+      # 產生的指標 remote_write 至 Prometheus
+      metrics_generator:
+        ring:
+          kvstore:
+            store: memberlist    # single binary 用 memberlist 組成 1 節點的 ring
+        processor:
+          span_metrics:
+            enable_target_info: true
+          service_graphs:
+            enable_messaging_system_latency_histogram: false
+        storage:
+          path: /var/tempo/generator/wal
+          remote_write:
+            - url: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/write
+              send_exemplars: true
+
+      overrides:
+        defaults:
+          metrics_generator:
+            processors: [service-graphs, span-metrics]   # 啟用兩個 processor
+
       # ── 保留設定 ────────────────────────────────────────────────────────────
       compactor:
         compaction:

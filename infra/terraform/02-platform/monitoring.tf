@@ -16,6 +16,8 @@ resource "helm_release" "kube_prometheus_stack" {
     prometheus:
       prometheusSpec:
         retention: "24h"          # production dev (無法拆開) 指標保留 24 小時
+        # 開啟 Remote Write Receiver，讓 Tempo metrics-generator 可以 push 指標
+        enableRemoteWriteReceiver: true
         resources:
           requests:
             memory: "512Mi"
@@ -57,6 +59,7 @@ resource "helm_release" "kube_prometheus_stack" {
           url: http://tempo.monitoring.svc.cluster.local:3100
           access: proxy
           isDefault: false
+          uid: loki
           jsonData:
             httpMethod: GET
             # Trace → Log 跳轉（點 trace 可直接跳 Loki 查對應時段 log）
