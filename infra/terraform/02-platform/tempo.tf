@@ -50,9 +50,9 @@ resource "helm_release" "tempo" {
         per_tenant_override_config: /conf/overrides.yaml
       metrics_generator:
         traces_storage:
-          path: /var/tempo/wal   # local-blocks 必須指向 ingester WAL 路徑
+          path: /var/tempo/wal          # local-blocks 必須指向 ingester WAL 路徑
         storage:
-          path: /tmp/tempo
+          path: /var/tempo/generator    # 改用 PVC 路徑，重啟後不丟失
           remote_write:
             - url: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/write
 
