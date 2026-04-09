@@ -48,14 +48,15 @@ resource "helm_release" "tempo" {
         remoteWriteUrl: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/write"
 
       # ── Per-tenant overrides（寫入 /conf/overrides.yaml）──────────────────
-      # "*" 匹配所有 tenant，per-tenant 設定會覆蓋 global metrics_generator_processors
-      # 這是唯一能在此 chart 版本加入 local-blocks 的方式
       overrides:
         "*":
           metrics_generator_processors:
             - service-graphs
             - span-metrics
-            - local-blocks    # 必須有此 processor，Drilldown Breakdown/Comparison 才能運作
+            - local-blocks    # Drilldown Breakdown/Comparison 必須有此 processor
+          # 新版預設 rate limit 為 0，必須明確設定否則所有 trace 都被擋掉
+          ingestion_rate_limit_bytes: 15000000   # 15 MB/s
+          ingestion_burst_size_bytes: 20000000   # 20 MB burst
 
     # ── 資源 ─────────────────────────────────────────────────────────────────
     resources:
