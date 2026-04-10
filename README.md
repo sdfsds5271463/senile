@@ -1,66 +1,175 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Senile App
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Laravel 11 + Inertia.js (Vue 3) + SSR 的全端 Web 應用程式。
+學習用專案，目標為熟悉現代全端部署架構，涵蓋容器化、Kubernetes、GitOps、CI/CD、監控等完整生產流程。
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 技術架構
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+| 層級 | 技術 |
+|---|---|
+| 前端 | Vue 3 + Inertia.js + PrimeVue + Tailwind CSS |
+| 後端 | Laravel 11 (PHP 8.3-fpm) |
+| SSR | Inertia SSR（node bootstrap/ssr/ssr.js）|
+| 資料庫 | MySQL 8.0 |
+| 快取 / Session / Queue | Redis 7 |
+| 容器 | Docker multi-stage build |
+| 部署 | k3s + Kustomize（base / production / dev）|
+| GitOps | ArgoCD |
+| Secret | Bitnami Sealed Secrets |
+| 監控 | Prometheus + Grafana + Loki + Tempo |
+| CI/CD | GitHub Actions（self-hosted runner）|
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## 本地開發
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### 前置需求
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+- Docker + Docker Compose
+- PHP 8.3 + Composer
+- Node.js 20 + npm
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 啟動
 
-## Laravel Sponsors
+```bash
+# 安裝 PHP 套件
+composer install
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+# 安裝 JS 套件
+npm install
 
-### Premium Partners
+# 複製環境設定
+cp .env.example .env
+php artisan key:generate
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+# 啟動容器（MySQL、Redis、PHP、Nginx、Worker、Scheduler、SSR）
+docker compose up -d
 
-## Contributing
+# 首次啟動：執行 migration 與 seed
+php artisan migrate
+php artisan db:seed
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### 前端開發（HMR）
 
-## Code of Conduct
+```bash
+# 在 host 上跑，不要在 Docker 裡跑
+npm run dev
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+瀏覽器開啟 http://localhost:8080
 
-## Security Vulnerabilities
+### 注意事項
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+- MySQL 資料存在 named volume `mysql-data`，`docker compose down` 不會刪資料
+- 要重置資料庫請用 `docker compose down -v`
 
-## License
+---
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## CI/CD 流程
+
+```
+push to main/dev
+    ↓
+PHP Unit Tests
+    ↓
+Semgrep 安全掃描（SAST）
+    ↓
+Docker Build + Push to Docker Hub
+    ↓
+Trivy Image Scan（僅 main，CRITICAL 漏洞阻擋部署）
+    ↓
+更新 kustomization.yaml image tag
+    ↓
+建立 Deploy PR（CodeRabbit AI Review）
+    ↓
+merge PR → ArgoCD 偵測變化 → 自動 sync 到 k3s
+    ↓
+Release Please 更新 CHANGELOG + 建立 GitHub Release
+```
+
+---
+
+## 部署架構
+
+```
+GitHub
+  └── ArgoCD（監聽 k8s/ 目錄）
+        └── k3s cluster
+              ├── production namespace
+              │     ├── laravel-app（php-fpm + nginx sidecar）
+              │     ├── laravel-worker（queue worker）
+              │     ├── laravel-scheduler
+              │     ├── laravel-ssr（Inertia SSR server）
+              │     ├── mysql-0（StatefulSet）
+              │     └── redis
+              └── dev namespace（同結構，資源規格較小）
+```
+
+---
+
+## Secret 管理
+
+所有 Secret 透過 `kubeseal` 加密後存入 git，由 sealed-secrets-controller 在 cluster 內解密。
+
+```bash
+# 產生 production sealed secret
+kubectl create secret generic laravel-secret \
+  --namespace=production \
+  --from-literal=APP_KEY='...' \
+  --from-literal=DB_ROOT_PASSWORD='...' \
+  --from-literal=DB_PASSWORD='...' \
+  --from-literal=MIGRATION_DB_PASSWORD='...' \
+  --from-literal=MYSQL_EXPORTER_PASSWORD='...' \
+  --dry-run=client -o yaml | \
+kubeseal --controller-namespace kube-system --format yaml \
+  > k8s/overlays/production/sealed-secret.yaml
+```
+
+---
+
+## 目錄結構
+
+```
+app/                        Laravel 應用程式邏輯
+resources/
+  js/
+    Pages/                  Inertia 頁面元件
+    Components/             共用 Vue 元件
+    ssr.js                  SSR 入口
+  css/app.css               Tailwind CSS 入口
+  views/app.blade.php       唯一的 Blade 模板
+k8s/
+  base/                     共用 Kubernetes manifests
+  overlays/
+    production/             production 環境差異
+    dev/                    dev 環境差異
+infra/
+  ansible/                  伺服器初始化（k3s、Docker、runner）
+  terraform/                Helm chart 部署（Prometheus、Grafana、ArgoCD）
+docker/
+  entrypoint.sh             容器啟動腳本
+  migrate-with-lock.php     分散式 migration（MySQL advisory lock）
+  nginx.conf                Nginx 設定
+.github/workflows/
+  deploy.yml                CI/CD pipeline
+```
+
+---
+
+## Commit Message 規範
+
+遵守 [Conventional Commits](https://www.conventionalcommits.org/)：
+
+```
+feat: 新增功能
+fix: 修正 bug
+chore: 雜項維護
+refactor: 重構
+docs: 文件
+test: 測試
+```
+
+Release Please 依此自動產生 `CHANGELOG.md` 與 GitHub Release。
