@@ -55,6 +55,10 @@ jobs:
         run: php artisan test tests/Feature/TestServiceTest.php --testdox
 
       # ── AI 安全掃描（原始碼，兩條線都跑，在 build 之前，有問題不推 image）──
+      # SEMGREP_APP_TOKEN 是選填的：
+      # 沒有 token：掃描照跑，結果只在 CI log 看得到
+      # 有 token：結果會上傳到 Semgrep Cloud dashboard，可以追蹤歷史、設 PR comment
+      # 要加 token 的話：去 semgrep.dev 註冊 → Settings → Tokens → 複製後加到 GitHub repo → Settings → Secrets → SEMGREP_APP_TOKEN。
       - name: Semgrep Security Scan
         run: |
           docker run --rm \
@@ -65,7 +69,7 @@ jobs:
             semgrep ci --config p/php --config p/javascript --config p/owasp-top-ten
         env:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
-
+          
       # ── Docker Hub 登入 + Build + Push ──────────────────────────────────────
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -204,3 +208,20 @@ jobs:
           with urllib.request.urlopen(req) as resp:
               print(f'Comment posted: HTTP {resp.status}')
           PYEOF
+
+  # ── Release Please：自動產生 Changelog + GitHub Release ─────────────────────
+  # 每次 push 到 main，自動開一個 PR 更新 CHANGELOG.md 和版號
+  # PR merge 後自動建立 GitHub Release + git tag（例如 v1.2.0）
+  # 前提：commit message 遵守 Conventional Commits（feat/fix/chore...）
+  #   needs: build-and-push：等 build/test/scan 都過了才跑，不會在有問題的 commit 上建 Release
+  #   if: github.ref == 'refs/heads/main'：只在 main 跑，dev 不管
+  #   release-type: simple：不綁定特定語言框架，適合這個專案
+  release-please:
+    runs-on: self-hosted
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.MY_PAT }}
+          release-type: simple
