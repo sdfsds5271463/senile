@@ -56,9 +56,12 @@ jobs:
 
       # ── AI 安全掃描（原始碼，兩條線都跑，在 build 之前，有問題不推 image）──
       # SEMGREP_APP_TOKEN 是選填的：
-      # 沒有 token：掃描照跑，結果只在 CI log 看得到
-      # 有 token：結果會上傳到 Semgrep Cloud dashboard，可以追蹤歷史、設 PR comment
-      # 要加 token 的話：去 semgrep.dev 註冊 → Settings → Tokens → 複製後加到 GitHub repo → Settings → Secrets → SEMGREP_APP_TOKEN。
+      # 1. 沒有 token： 掃描照跑，結果只在 CI log 看得到
+      #     指令要加config：  semgrep ci --config p/php --config p/javascript --config p/owasp-top-ten
+      # 2. 有 token： 結果會上傳到 Semgrep Cloud dashboard，可以追蹤歷史、設 PR comment
+      #     semgrep.dev 註冊(連結Github) → Settings → Tokens → 複製並到 GitHub repo → Settings → Secrets → SEMGREP_APP_TOKEN
+      #     semgrep.dev → Projects → repo → Rules 設定（加設定 p/php、p/javascript、p/owasp-top-ten）
+      #     指令不用config：  semgrep ci
       - name: Semgrep Security Scan
         run: |
           docker run --rm \
@@ -66,7 +69,7 @@ jobs:
             -v "${{ github.workspace }}:/src" \
             --workdir /src \
             semgrep/semgrep \
-            semgrep ci --config p/php --config p/javascript --config p/owasp-top-ten
+            semgrep ci
         env:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
           
