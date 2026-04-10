@@ -66,6 +66,22 @@ jobs:
           docker build -t ${{ steps.vars.outputs.image }} .
           docker push ${{ steps.vars.outputs.image }}
 
+      # ── AI 安全掃描（原始碼，兩條線都跑）────────────────────────────────────
+      - name: Semgrep Security Scan
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: >
+            p/laravel
+            p/php
+            p/javascript
+            p/owasp-top-ten
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+          # SEMGREP_APP_TOKEN 是選填的：
+          # 沒有 token：掃描照跑，結果只在 CI log 看得到
+          # 有 token：結果會上傳到 Semgrep Cloud dashboard，可以追蹤歷史、設 PR comment
+          # 要加 token 的話：去 semgrep.dev 註冊 → Settings → Tokens → 複製後加到 GitHub repo → Settings → Secrets → SEMGREP_APP_TOKEN。
+
       # ── 掃描 image（僅 production，有 CRITICAL 漏洞則中止部署）───────────────
       - name: Scan image with Trivy
         if: steps.vars.outputs.branch == 'main'
