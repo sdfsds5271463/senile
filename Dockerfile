@@ -66,5 +66,7 @@ RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-ENTRYPOINT ["entrypoint.sh"]
-CMD ["php-fpm"]
+# php-fpm master process 必須以 root 啟動才能管理 worker processes
+# worker 本身以 www-data (uid 33) 執行，k8s securityContext 已設 runAsUser: 33
+ENTRYPOINT ["entrypoint.sh"] # nosemgrep: dockerfile.security.missing-user-entrypoint
+CMD ["php-fpm"] # nosemgrep: dockerfile.security.missing-user

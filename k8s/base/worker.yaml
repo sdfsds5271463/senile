@@ -17,6 +17,8 @@ spec:
       - name: ssr
         image: manualsmash/senile-app:placeholder
         imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
         command: ["php", "artisan", "inertia:start-ssr"]
         ports:
         - containerPort: 13714
@@ -78,6 +80,8 @@ spec:
       - name: worker
         image: manualsmash/senile-app:placeholder
         imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
         command: ["php", "artisan", "queue:work", "--verbose", "--tries=3", "--timeout=90"]
         envFrom:
         - configMapRef:
@@ -111,6 +115,8 @@ spec:
       - name: scheduler
         image: manualsmash/senile-app:placeholder
         imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
         command: ["sh", "-c", "while [ true ]; do php artisan schedule:run --no-interaction; sleep 60; done"]
         envFrom:
         - configMapRef:

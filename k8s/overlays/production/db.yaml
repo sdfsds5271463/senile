@@ -43,6 +43,8 @@ spec:
       containers:
       - name: mysql
         image: mysql:8.0
+        securityContext:
+          allowPrivilegeEscalation: false
         ports:
           - containerPort: 3306
         env:
@@ -100,6 +102,8 @@ spec:
 
       - name: mysql-exporter
         image: prom/mysqld-exporter:v0.15.1
+        securityContext:
+          allowPrivilegeEscalation: false
         args:
           - --mysqld.address=127.0.0.1:3306
           - --mysqld.username=exporter
@@ -170,6 +174,8 @@ spec:
       containers:
       - name: redis
         image: redis:7-alpine
+        securityContext:
+          allowPrivilegeEscalation: false
         ports:
           - containerPort: 6379
         resources:
@@ -192,6 +198,8 @@ spec:
 
       - name: redis-exporter
         image: oliver006/redis_exporter:v1.66.0
+        securityContext:
+          allowPrivilegeEscalation: false
         ports:
           - containerPort: 9121
             name: metrics
