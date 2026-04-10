@@ -169,6 +169,7 @@ fix: 修正 bug
 chore: 雜項維護
 refactor: 重構
 docs: 文件
+style: 排版/格式
 test: 測試
 ```
 
