@@ -11,6 +11,7 @@ export const GeminiApiStore = defineStore('GeminiApiStore', {
   }),
 
   actions: {
+    //geminiapi
     async act_geminiapi() {
       this.loading = true;
       this.error = '';
@@ -39,6 +40,22 @@ export const GeminiApiStore = defineStore('GeminiApiStore', {
         console.error("GeminiApi error", e);
       } finally {
         this.loading = false;
+      }
+    },
+
+    //healthychk
+    async act_healthychk() {
+      try {
+        const response = await fetch('/api/healthychk', {
+          method: 'GET',
+        });
+        const data = await response.json();
+
+        if (data.flag != true) {
+          console.error("Healthychk is bad now");
+        }
+      } catch (e) {
+        console.error("Healthychk error", e);
       }
     },
   },

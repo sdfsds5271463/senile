@@ -25,4 +25,7 @@ Route::middleware([\App\Http\Middleware\PrometheusMetricsMiddleware::class])->gr
     // 測試發送 gemini API
     // http://127.0.0.1:8080/api/geminiapi
     Route::get('/geminiapi', [TestController::class, 'geminiapi']);
+
+    //測試健康
+    Route::get('/healthychk', [TestController::class, 'healthychk']);
 });

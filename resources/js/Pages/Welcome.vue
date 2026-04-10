@@ -1,6 +1,6 @@
-<script setup>
+<script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-//import Button from 'primevue/button';
+import { onMounted,onUnmounted } from 'vue'
 import { GeminiApiStore } from '@/Stores/GeminiApiStore'
 
 defineProps({
@@ -11,6 +11,18 @@ defineProps({
 });
 
 const GeminiApi = GeminiApiStore();
+
+//healthyChk
+let timer: ReturnType<typeof setInterval> | null = null
+onMounted(() => {
+    timer = setInterval(()=>{
+        GeminiApi.act_healthychk();
+    },5000); 
+})
+onUnmounted(() => {
+    clearInterval(timer ?? undefined)  //很重要!!
+})
+
 </script>
 
 <template>
@@ -80,7 +92,6 @@ const GeminiApi = GeminiApiStore();
                         s
                     </p>
                 </div>
-
                 <div class="gemini-card">
                     <button
                         class="gemini-btn"

@@ -292,7 +292,7 @@ class TestController extends Controller
     }
 
     //測試發送 gemini api
-    function geminiapi(Request $request){
+    public function geminiapi(Request $request){
         //http://127.0.0.1:8080/api/geminiapi?timeout=60
 
         //自訂超時(測試 500 錯誤用)
@@ -415,5 +415,10 @@ class TestController extends Controller
         return response()->json($ret, 200);
     }
 
+
+    // 測試健康
+    public function healthychk(Request $request){
+        return response()->json(["status"=>"success", "msg"=>"healthy", "flag"=>true], 200);
+    }
 
 }
