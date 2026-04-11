@@ -74,7 +74,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.local
-    command: php artisan queue:work
+    command: php artisan horizon
     depends_on:
       - app
     env_file: .env

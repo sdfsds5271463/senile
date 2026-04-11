@@ -73,8 +73,8 @@ spec:
       labels:
         app: laravel-worker
     spec:
-      # 必須大於 queue:work --timeout=90，讓當前 job 有足夠時間跑完再結束
-      # 公式：terminationGracePeriodSeconds > --timeout + 少量緩衝
+      # Horizon 收到 SIGTERM 會等當前 job 跑完才退出（graceful shutdown）
+      # terminationGracePeriodSeconds 需大於最長 job 執行時間
       terminationGracePeriodSeconds: 120
       containers:
       - name: worker
@@ -82,7 +82,7 @@ spec:
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
-        command: ["php", "artisan", "queue:work", "--verbose", "--tries=3", "--timeout=90"]
+        command: ["php", "artisan", "horizon"]
         envFrom:
         - configMapRef:
             name: laravel-config
