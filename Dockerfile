@@ -68,5 +68,5 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # php-fpm master process 必須以 root 啟動才能管理 worker processes
 # worker 本身以 www-data (uid 33) 執行，k8s securityContext 已設 runAsUser: 33
-ENTRYPOINT ["entrypoint.sh"] # nosemgrep
-CMD ["php-fpm"] # nosemgrep
+ENTRYPOINT ["entrypoint.sh"]
+CMD ["php-fpm"]

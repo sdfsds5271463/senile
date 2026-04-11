@@ -58,9 +58,9 @@ jobs:
       # SEMGREP_APP_TOKEN 是選填的：
       # 1. 沒有 token： 掃描照跑，結果只在 CI log 看得到
       #     指令要加config：  semgrep ci --config p/php --config p/javascript --config p/owasp-top-ten
-      # 2. 有 token： 結果會上傳到 Semgrep Cloud dashboard，可以追蹤歷史、設 PR comment
+      # 2. 有 token： 結果會上傳到 Semgrep Cloud Projects 可以追蹤歷史、設 PR comment
       #     semgrep.dev 註冊(連結Github) → Settings → Tokens → 複製並到 GitHub repo → Settings → Secrets → SEMGREP_APP_TOKEN
-      #     semgrep.dev → Projects → repo → Rules 設定（加設定 p/php、p/javascript、p/owasp-top-ten）
+      #     semgrep.dev → Projects → repo → 自動掃描(連結Github) → 即可推送 → (可選)Rules 設定(如果你不信任它自動設定，可手動加設定 p/php、p/javascript、p/owasp-top-ten)
       #     指令不用config：  semgrep ci
       - name: Semgrep Security Scan
         run: |
