@@ -393,6 +393,13 @@ class TestController extends Controller
         if (!$response->successful()) {
             $status = $response->status();
             $ret['msg'] = "http status fail: {$status}";
+            Log::error('gemini http status fail', [
+                'traceID' => Span::getCurrent()->getContext()->getTraceId(),
+                'error'   => $status,
+                'body'    => $response->body(),
+                'model'   => $model,
+                'url'     => $url,
+            ]);
             return response()->json($ret, 500);
         }
 
@@ -403,6 +410,12 @@ class TestController extends Controller
         // 不正常回應
         if ($answer == "") {
             $ret['msg'] = "gemini answer null";
+            Log::error('gemini answer null', [
+                'traceID' => Span::getCurrent()->getContext()->getTraceId(),
+                'body'    => $response->body(),
+                'model'   => $model,
+                'url'     => $url,
+            ]);
             return response()->json($ret, 500);
         }
         
